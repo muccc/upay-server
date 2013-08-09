@@ -1,6 +1,8 @@
 import nupay
 import time
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
 token_reader = nupay.USBTokenReader()
 
 
