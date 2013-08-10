@@ -95,6 +95,7 @@ class SessionTest(unittest.TestCase):
             session.validate_tokens(tokens)
             self.assertRaises(nupay.NotEnoughCreditError, session.cash, Decimal(2.1))
             self.assertEqual(0, session.total)
+            self.assertEqual(Decimal(2), session.credit)
 
     def test_good_cash(self):
         tokens = [nupay.Token(), nupay.Token(), nupay.Token(), nupay.Token()]
@@ -105,6 +106,7 @@ class SessionTest(unittest.TestCase):
             session.validate_tokens(tokens)
             session.cash(Decimal(2.0))
             self.assertEqual(Decimal(2.0), session.total)
+            self.assertEqual(Decimal(0), session.credit)
 
     def test_good_cash_split(self):
         tokens = [nupay.Token(), nupay.Token(), nupay.Token(), nupay.Token()]
@@ -117,6 +119,7 @@ class SessionTest(unittest.TestCase):
             session.cash(Decimal(0.25))
             self.assertRaises(nupay.NotEnoughCreditError, session.cash, Decimal(1.0))
             self.assertEqual(Decimal(1.5), session.total)
+            self.assertEqual(Decimal(0.5), session.credit)
 
     def test_rollback(self):
         tokens = [nupay.Token(), nupay.Token(), nupay.Token(), nupay.Token()]

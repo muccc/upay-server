@@ -6,6 +6,29 @@ import os
 class NoTokensAvailableError(Exception):
     pass
 
+def read_tokens_from_file(purse_path, max_tokens = 200, max_size = 100 * 1024):
+    logger = logging.getLogger(__name__)
+    try:
+        if os.path.getsize(purse_path) > max_size:
+            raise NoTokensAvailableError("Purse at %s is to big"%(purse_path))
+    except OSError as e:
+        logger.warning("OSError while reading a purse", exc_info=True)
+        return []
+
+    tokens = []
+    with io.open(purse_path, 'rb') as purse:
+        for line in purse:
+            t = token.Token(line)
+            if t not in tokens:
+                tokens.append(t)
+            else:
+                logger.info("Found duplicated token: %s"%t.token)
+
+            if len(tokens) >= max_tokens:
+                break
+
+    return tokens
+       
 class USBTokenReader(object):
     def __init__(self, mounts_path = '/proc/mounts'):
         self.logger = logging.getLogger(__name__)
@@ -25,7 +48,6 @@ class USBTokenReader(object):
     def read_tokens(self, max_tokens = 200, max_size = 100 * 1024):
         self._read_paths = []
         read_paths = []
-        tokens = []
         
         mount_points = self._read_mount_points()
         for mount_point in mount_points.values():
@@ -33,36 +55,17 @@ class USBTokenReader(object):
                 purse_path = mount_point + '/purse'
                 if not os.path.isfile(purse_path):
                     continue
-
-                try:
-                    if os.path.getsize(purse_path) > max_size:
-                        raise NoTokensAvailableError("Purse at %s is to big"%(purse_path))
-                except OSError as e:
-                    self.logger.warning("OSError while reading a purse", exc_info=True)
-                    continue
-
-                with io.open(purse_path, 'rb') as purse:
-                    for line in purse:
-                        t = token.Token(line)
-                        if t not in tokens:
-                            tokens.append(t)
-                        else:
-                            self.logger.info("Found duplicated token: %s"%t.token)
-
-                        if mount_point not in read_paths:
-                            read_paths.append(mount_point)
-
-                        if len(tokens) >= max_tokens:
-                            break
-
+                
+                tokens = read_tokens_from_file(purse_path, max_tokens, max_size)
                 if len(tokens) > 0:
-                    self._read_paths = read_paths
+                    self._read_paths = [mount_point]
                     return tokens
+       
             except IOError as e:
                 self.logger.warning("IOError while reading a purse", exc_info=True)
             except token.BadTokenFormatError:
-                raise NoTokensAvailableError("Badly formatted token found")
-        raise NoTokensAvailableError()
+                raise NoTokensAvailableError("Badly formatted token found in file %s"%purse_path)
+        raise NoTokensAvailableError("No purse with valid tokens found")
 
 
     @property

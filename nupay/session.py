@@ -124,22 +124,24 @@ class Session(object):
         return len(self._tokens) * self._token_value
 
     def cash(self, amount):
+        amount = Decimal(amount)
         self._cashed_tokens = []
         for token in self._tokens:
+            if amount <= 0:
+                break
             self._logger.info('Marking %s used' % token)
             self._db_cur.execute('UPDATE tokens SET used=NOW() WHERE hash=%s and used is NULL', (token.hash,))
             if self._db_cur.rowcount == 1:
                 amount -= self._token_value
                 self._cashed_tokens.append(token)
-            if amount <= 0:
-                break
 
         if amount <= 0:
             self._db.commit()
             self._total += len(self._cashed_tokens) * self._token_value
+            map(self._tokens.remove, self._cashed_tokens)
         else:
             self._cashed_tokens = []
-            raise NotEnoughCreditError("Missing amount: %d"%amount)
+            raise NotEnoughCreditError(("Missing amount: %.02f Eur"%amount, amount))
 
     @property
     def total(self):
@@ -154,6 +156,7 @@ class Session(object):
             if self._db_cur.rowcount != 1:
                 raise RollbackError('Unknown rollback error')
         self._total -= len(self._cashed_tokens) * self._token_value
+        map(self._tokens.append, self._cashed_tokens)
         self._cashed_tokens = []
         self._db.commit()
 
