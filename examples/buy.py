@@ -3,8 +3,7 @@ import sys
 import nupay
 
 config = ConfigParser.RawConfigParser()
-config_file = sys.argv[1]
-config.read(config_file)
+config.read(sys.argv[1])
 
 tokens = nupay.read_tokens_from_file(sys.argv[2])
 
