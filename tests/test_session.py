@@ -12,7 +12,6 @@ def db_config():
     config.set("Database", "db", "testtokendb")
     config.set("Database", "host", "localhost")
     config.set("Database", "port", "5432")
-    config.set("Database", "user", "laser")
     config.set("Database", "user", "testuser")
     config.set("Database", "password", "fnord23")
     config.set("Database", "allow_bootstrap", "True")
