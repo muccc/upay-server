@@ -91,11 +91,13 @@ class Session(object):
             self._logger.info('%s does not exist' % token)
             return False
 
-    def validate_tokens(self, tokens):
+    def validate_tokens(self, tokens, callback = None):
         for token in tokens:
             if token not in self._tokens:
                 if self._validate_token(token):
                     self._tokens.append(token)
+                    if callback:
+                        callback(self)
         return self.credit
 
     def _add_token(self, token):
