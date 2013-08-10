@@ -46,4 +46,8 @@ class Token(object):
     def __eq__(self, other):
         return other.token == self.token
 
+    def __str__(self):
+        return self.token
 
+    def __repr__(self):
+        return self.token
