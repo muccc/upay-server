@@ -73,11 +73,10 @@ class Session(object):
         ret = self._db_cur.fetchone()
         self._logger.debug('fetch returned %s' % str(ret))
         if ret:
-            self._logger.info('%s is unused' % token)
-            # print "FOUND UNUSED TOKEN: %s" % token
+            self._logger.debug('%s is unused' % token)
             return True
         else:
-            self._logger.info('%s is used' % token)
+            self._logger.debug('%s is used' % token)
             return False
 
     def _token_exists(self, token):
