@@ -43,7 +43,8 @@ class SessionTest(unittest.TestCase):
         logging.basicConfig(level=logging.ERROR)
         self.config = db_config()
         self.session_manager = nupay.SessionManager(self.config)
-        self.session_manager.bootstrap_db()
+        with self.session_manager.create_session() as session:
+            session.bootstrap_db()
 
     def tearDown(self):
         pass
