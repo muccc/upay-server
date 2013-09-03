@@ -6,10 +6,18 @@ from functools import wraps
 import time
 import uuid
 from decimal import Decimal
+import nupay
+import ConfigParser
+import sys
+
+config = ConfigParser.RawConfigParser()
+config.read(sys.argv[1])
 
 context = SSL.Context(SSL.SSLv23_METHOD)
 context.use_privatekey_file('test.key')
 context.use_certificate_file('test.crt')
+
+session_manager = nupay.ServerSessionManager(config)
 
 def check_auth(username, password):
     if username == 'admin' and password == 'secret':
@@ -33,7 +41,6 @@ def requires_auth(f):
 def check_session_id_and_transaction_id(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        print kwargs
         session_id = kwargs['session_id']
         check_session_timeouts()
 
@@ -71,6 +78,7 @@ sessions = {}
 SESSION_TIMEOUT = 300
 
 def remove_session(session_id):
+    sessions[session_id]['database_session'].close()
     del sessions[session_id]
 
 def get_uri_for_session(session):
@@ -84,7 +92,7 @@ def get_uri_for_transaction(session, transaction_id):
             transaction_id = transaction_id, _external = True)
 
 def make_public_session(session):
-    public_fields = ('id', 'name', 'owner', 'timeout', 'balance', 'total')
+    public_fields = ('id', 'name', 'owner', 'timeout')
     public_session = {}
     for field in session:
         if field in public_fields:
@@ -93,13 +101,18 @@ def make_public_session(session):
             public_session['uri'] = get_uri_for_session(session)
         elif field == 'timeout':
             public_session['timeout'] = int(public_session['timeout'] - time.time())
+        if field == 'database_session':
+            database_session = session[field]
+            public_session['total'] = database_session.total
+            public_session['credit'] = database_session.credit
+
     return public_session
 
 def is_token_unused(token):
     for session in sessions.values():
-        if token in session['valid_tokens']:
+        if token in session['database_session'].valid_tokens:
             return False
-        if token in session['used_tokens']:
+        if token in session['database_session'].used_tokens:
             return False
     return True
 
@@ -126,9 +139,11 @@ def post_session():
         abort(400)
 
     id = str(uuid.uuid4())
+    database_session = session_manager.create_session()
+
     session = {'id': id, 'name': request.json['name'], 'owner': request.authorization.username,
                 'timeout': time.time() + SESSION_TIMEOUT,
-                'balance': Decimal(0), 'total': Decimal(0), 'valid_tokens': [], 'used_tokens': [], 'transactions': {}}
+                'database_session': database_session, 'transactions': {}}
     sessions[id] = session
     location = get_uri_for_session(session)
 
@@ -156,17 +171,16 @@ def delete_session(session_id):
 def post_tokens(session_id):
     if not request.json or not 'tokens' in request.json:
         abort(400)
-    if not type(request.json['tokens']) == type(list):
+    if not type(request.json['tokens']) == type([]):
         abort(400)
 
     session = sessions[session_id]
-    for token in request.json['tokens']:
-        if is_token_unused(token):
-            session['valid_tokens'].append(token)
-            session['balance'] += Decimal(0.5)
+    tokens = map(nupay.Token,  request.json['tokens'])
+    unsused_tokens = filter(is_token_unused, tokens)
+    session['database_session'].validate_tokens(unsused_tokens)
 
     location = get_uri_for_valid_tokens(session)
-    return jsonify( { 'valid_tokens': session['valid_tokens'] } ), 201, {'Location': location}
+    return jsonify( { 'valid_tokens': map(str, session['database_session'].valid_tokens) } ), 201, {'Location': location}
 
 @app.route('/v1.0/pay/sessions/<session_id>/valid_tokens', methods = ['GET'])
 @get_global_lock
@@ -174,7 +188,7 @@ def post_tokens(session_id):
 @check_session_id_and_transaction_id
 def get_valid_tokens(session_id):
     session = sessions[session_id]
-    return jsonify({'valid_tokens': session['valid_tokens']})
+    return jsonify( { 'valid_tokens': map(str, session['database_session'].valid_tokens) } )
 
 @app.route('/v1.0/pay/sessions/<session_id>/used_tokens', methods = ['GET'])
 @get_global_lock
@@ -182,8 +196,7 @@ def get_valid_tokens(session_id):
 @check_session_id_and_transaction_id
 def get_used_tokens(session_id):
     session = sessions[session_id]
-    return jsonify({'used_tokens': session['used_tokens']})
-
+    return jsonify( { 'used_tokens': map(str, session['database_session'].used_tokens) } )
 
 @app.route('/v1.0/pay/sessions/<session_id>/transactions', methods = ['POST'])
 @get_global_lock
@@ -198,16 +211,16 @@ def post_transaction(session_id):
         abort(400)
 
     session = sessions[session_id]
-    if session['balance'] >= amount:
-        transaction_id = str(uuid.uuid4())
-        transaction = {'amount': amount, 'id': transaction_id}
+    transaction_id = str(uuid.uuid4())
+    transaction = {'amount': amount, 'id': transaction_id}
+
+    try:
+        session['database_session'].cash(amount)
         session['transactions'][transaction_id] = transaction
-        session['balance'] -= amount
-        session['total'] += amount
         location = get_uri_for_transaction(session, transaction_id)
         return jsonify( { 'transaction': transaction } ), 201, {'Location': location}
-    else:
-        return jsonify({'error': 'Balance too low'}), 402
+    except nupay.NotEnoughCreditError as e:
+        return jsonify({'error': 'Balance too low', 'info': str(e)}), 402
 
 @app.route('/v1.0/pay/sessions/<session_id>/transaction/<transaction_id>', methods = ['GET'])
 @get_global_lock
