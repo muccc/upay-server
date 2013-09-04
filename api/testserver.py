@@ -108,11 +108,23 @@ def make_public_session(session):
 
     return public_session
 
+def make_public_transaction(transaction):
+    public_fields = ('id', 'amount', 'used_tokens')
+    public_transaction = {}
+
+    for field in transaction:
+        if field in public_fields:
+            public_transaction[field] = transaction[field]
+        if field == 'used_tokens':
+            public_transaction['used_tokens'] = \
+                    map(str, transaction[field])
+
+    return public_transaction
+
+
 def is_token_unused(token):
     for session in sessions.values():
         if token in session['database_session'].valid_tokens:
-            return False
-        if token in session['database_session'].used_tokens:
             return False
     return True
 
@@ -195,14 +207,6 @@ def get_valid_tokens(session_id):
     session = sessions[session_id]
     return make_response(jsonify( { 'valid_tokens': map(str, session['database_session'].valid_tokens) } ))
 
-@app.route('/v1.0/pay/sessions/<session_id>/used_tokens', methods = ['GET'])
-@get_global_lock
-@requires_auth
-@check_session_id_and_transaction_id
-def get_used_tokens(session_id):
-    session = sessions[session_id]
-    return make_response(jsonify( { 'used_tokens': map(str, session['database_session'].used_tokens) } ))
-
 @app.route('/v1.0/pay/sessions/<session_id>/transactions', methods = ['POST'])
 @get_global_lock
 @requires_auth
@@ -220,17 +224,20 @@ def post_transaction(session_id):
     transaction = {'amount': amount, 'id': transaction_id}
 
     try:
-        session['database_session'].cash(amount)
+        transaction['used_tokens'] = session['database_session'].cash(amount)
         session['transactions'][transaction_id] = transaction
         
-        response = get_valid_tokens(session_id=session_id,
+        response = get_transaction(session_id=session_id,
                 transaction_id=transaction_id)
         response.headers['Location'] = get_uri_for_transaction(session,
                 transaction_id)
         response.status_code = 201
         return response
     except nupay.NotEnoughCreditError as e:
-        return make_response(jsonify({'error': 'Balance too low', 'info': str(e)}), 402)
+        data = {'message': 'Balance too low'}
+        data['info'] = e.message[0]
+        data['amount'] = e.message[1]
+        return make_response(jsonify({'error': data}), 402)
 
 @app.route('/v1.0/pay/sessions/<session_id>/transaction/<transaction_id>', methods = ['GET'])
 @get_global_lock
@@ -238,6 +245,7 @@ def post_transaction(session_id):
 @check_session_id_and_transaction_id
 def get_transaction(session_id, transaction_id):
     transaction = sessions[session_id]['transactions'][transaction_id]
+    transaction = make_public_transaction(transaction)
     return make_response(jsonify({'transaction': transaction}))
 
 @app.route('/v1.0/pay/sessions/<session_id>/transaction/<transaction_id>', methods = ['DELETE'])
@@ -245,8 +253,11 @@ def get_transaction(session_id, transaction_id):
 @requires_auth
 @check_session_id_and_transaction_id
 def delete_transaction(session_id, transaction_id):
+    session = sessions[session_id]
+    session['database_session'].rollback(
+            session['transactions'][transaction_id]['used_tokens'])
+    del session['transactions'][transaction_id]
     return make_response(jsonify({}), 204)
-
 
 if __name__ == '__main__':
     app.run(debug = True, ssl_context=context)

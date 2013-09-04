@@ -77,17 +77,22 @@ class Session(object):
         amount = str(amount)
         r = requests.post(self._session_uri + '/transactions', verify=verify, timeout=timeout, auth=auth, headers=headers,
                 data = json.dumps({"amount": amount}))
+        
         self._update()
-        if 0:
+        if r.ok:
+            return r.headers['Location']
+        elif r.status_code == 402:
+            amount = r.json()['error']['amount'] 
             raise NotEnoughCreditError(("Missing amount: %.02f Eur"%amount, amount))
 
     @property
     def total(self):
         return self._total
 
-    def rollback(self):
-        r = requests.delete(self._last_transaction_uri, verify=verify, timeout=timeout, auth=auth, headers=headers)
-        if 0:
+    def rollback(self, transaction_uri):
+        r = requests.delete(transaction_uri, verify=verify, timeout=timeout, auth=auth, headers=headers)
+        self._update()
+        if not r.ok:
             raise RollbackError('Unknown rollback error')
 
 
