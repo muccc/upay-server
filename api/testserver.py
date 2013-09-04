@@ -147,14 +147,17 @@ def post_session():
     sessions[id] = session
     location = get_uri_for_session(session)
 
-    return jsonify( { 'session': make_public_session(session) } ), 201, {'Location': location}
+    response = get_session(session_id=id)
+    response.headers['Location'] = location
+    response.status_code = 201
+    return response
 
 @app.route('/v1.0/pay/sessions/<session_id>', methods = ['GET'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
 def get_session(session_id):
-    return jsonify({'session': make_public_session(sessions[session_id])})
+    return make_response(jsonify({'session': make_public_session(sessions[session_id])}))
 
 @app.route('/v1.0/pay/sessions/<session_id>', methods = ['DELETE'])
 @get_global_lock
@@ -162,7 +165,7 @@ def get_session(session_id):
 @check_session_id_and_transaction_id
 def delete_session(session_id):
     remove_session(session_id)
-    return jsonify({}), 204
+    return make_response(jsonify({}), 204)
 
 @app.route('/v1.0/pay/sessions/<session_id>/tokens', methods = ['POST'])
 @get_global_lock
@@ -179,8 +182,10 @@ def post_tokens(session_id):
     unsused_tokens = filter(is_token_unused, tokens)
     session['database_session'].validate_tokens(unsused_tokens)
 
-    location = get_uri_for_valid_tokens(session)
-    return jsonify( { 'valid_tokens': map(str, session['database_session'].valid_tokens) } ), 201, {'Location': location}
+    response = get_valid_tokens(session_id=id)
+    response.headers['Location'] = get_uri_for_valid_tokens(session)
+    response.status_code = 201
+    return response
 
 @app.route('/v1.0/pay/sessions/<session_id>/valid_tokens', methods = ['GET'])
 @get_global_lock
@@ -188,7 +193,7 @@ def post_tokens(session_id):
 @check_session_id_and_transaction_id
 def get_valid_tokens(session_id):
     session = sessions[session_id]
-    return jsonify( { 'valid_tokens': map(str, session['database_session'].valid_tokens) } )
+    return make_response(jsonify( { 'valid_tokens': map(str, session['database_session'].valid_tokens) } ))
 
 @app.route('/v1.0/pay/sessions/<session_id>/used_tokens', methods = ['GET'])
 @get_global_lock
@@ -196,7 +201,7 @@ def get_valid_tokens(session_id):
 @check_session_id_and_transaction_id
 def get_used_tokens(session_id):
     session = sessions[session_id]
-    return jsonify( { 'used_tokens': map(str, session['database_session'].used_tokens) } )
+    return make_response(jsonify( { 'used_tokens': map(str, session['database_session'].used_tokens) } ))
 
 @app.route('/v1.0/pay/sessions/<session_id>/transactions', methods = ['POST'])
 @get_global_lock
@@ -217,10 +222,15 @@ def post_transaction(session_id):
     try:
         session['database_session'].cash(amount)
         session['transactions'][transaction_id] = transaction
-        location = get_uri_for_transaction(session, transaction_id)
-        return jsonify( { 'transaction': transaction } ), 201, {'Location': location}
+        
+        response = get_valid_tokens(session_id=session_id,
+                transaction_id=transaction_id)
+        response.headers['Location'] = get_uri_for_transaction(session,
+                transaction_id)
+        response.status_code = 201
+        return response
     except nupay.NotEnoughCreditError as e:
-        return jsonify({'error': 'Balance too low', 'info': str(e)}), 402
+        return make_response(jsonify({'error': 'Balance too low', 'info': str(e)}), 402)
 
 @app.route('/v1.0/pay/sessions/<session_id>/transaction/<transaction_id>', methods = ['GET'])
 @get_global_lock
@@ -228,7 +238,15 @@ def post_transaction(session_id):
 @check_session_id_and_transaction_id
 def get_transaction(session_id, transaction_id):
     transaction = sessions[session_id]['transactions'][transaction_id]
-    return jsonify({'transaction': transaction})
+    return make_response(jsonify({'transaction': transaction}))
+
+@app.route('/v1.0/pay/sessions/<session_id>/transaction/<transaction_id>', methods = ['DELETE'])
+@get_global_lock
+@requires_auth
+@check_session_id_and_transaction_id
+def delete_transaction(session_id, transaction_id):
+    return make_response(jsonify({}), 204)
+
 
 if __name__ == '__main__':
     app.run(debug = True, ssl_context=context)
