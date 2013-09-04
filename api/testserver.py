@@ -194,7 +194,7 @@ def post_tokens(session_id):
     unsused_tokens = filter(is_token_unused, tokens)
     session['database_session'].validate_tokens(unsused_tokens)
 
-    response = get_valid_tokens(session_id=id)
+    response = get_valid_tokens(session_id=session_id)
     response.headers['Location'] = get_uri_for_valid_tokens(session)
     response.status_code = 201
     return response
