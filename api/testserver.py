@@ -121,7 +121,6 @@ def make_public_transaction(transaction):
 
     return public_transaction
 
-
 def is_token_unused(token):
     for session in sessions.values():
         if token in session['database_session'].valid_tokens:
@@ -137,7 +136,10 @@ def check_session_timeouts():
     for session_id in timed_out:
         print session_id, "timed out. deleting it"
         remove_session(session_id)
-            
+
+def reset_session_timeout(session):
+    session['timeout'] = time.time() + SESSION_TIMEOUT
+
 @app.route('/v1.0/status', methods = ['GET'])
 @get_global_lock
 def get_status():
@@ -154,8 +156,8 @@ def post_session():
     database_session = session_manager.create_session()
 
     session = {'id': id, 'name': request.json['name'], 'owner': request.authorization.username,
-                'timeout': time.time() + SESSION_TIMEOUT,
                 'database_session': database_session, 'transactions': {}}
+    reset_session_timeout(session);
     sessions[id] = session
     location = get_uri_for_session(session)
 
@@ -170,6 +172,19 @@ def post_session():
 @check_session_id_and_transaction_id
 def get_session(session_id):
     return make_response(jsonify({'session': make_public_session(sessions[session_id])}))
+
+@app.route('/v1.0/pay/sessions/<session_id>/keepalive', methods = ['POST'])
+@get_global_lock
+@requires_auth
+@check_session_id_and_transaction_id
+def post_session_keepalive(session_id):
+    session = sessions[session_id]
+    reset_session_timeout(session)
+
+    response = get_session(session_id=session_id)
+    response.headers['Location'] = get_uri_for_session(session)
+
+    return response
 
 @app.route('/v1.0/pay/sessions/<session_id>', methods = ['DELETE'])
 @get_global_lock
@@ -190,6 +205,7 @@ def post_tokens(session_id):
         abort(400)
 
     session = sessions[session_id]
+    reset_session_timeout(session)
     tokens = map(nupay.Token,  request.json['tokens'])
     unsused_tokens = filter(is_token_unused, tokens)
     session['database_session'].validate_tokens(unsused_tokens)
@@ -220,6 +236,7 @@ def post_transaction(session_id):
         abort(400)
 
     session = sessions[session_id]
+    reset_session_timeout(session)
     transaction_id = str(uuid.uuid4())
     transaction = {'amount': amount, 'id': transaction_id}
 
@@ -254,6 +271,7 @@ def get_transaction(session_id, transaction_id):
 @check_session_id_and_transaction_id
 def delete_transaction(session_id, transaction_id):
     session = sessions[session_id]
+    reset_session_timeout(session)
     session['database_session'].rollback(
             session['transactions'][transaction_id]['used_tokens'])
     del session['transactions'][transaction_id]
