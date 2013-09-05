@@ -17,7 +17,7 @@ class TimeoutError(Exception):
     pass
 
 headers = {'content-type': 'application/json'}
-auth=("admin", "secret")
+auth=("matemat", "secret")
 timeout=3
 verify="test.crt"
 

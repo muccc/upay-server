@@ -9,24 +9,36 @@ from decimal import Decimal
 import nupay
 import ConfigParser
 import sys
+import os
+
+config_file_path = sys.argv[1]
 
 config = ConfigParser.RawConfigParser()
-config.read(sys.argv[1])
+config.read(config_file_path)
+
+users_config_file_path = os.path.dirname(config_file_path) + \
+        os.path.sep + config.get('Users', 'users_file')
+
+users_config = ConfigParser.RawConfigParser()
+users_config.read(users_config_file_path)
 
 context = SSL.Context(SSL.SSLv23_METHOD)
 context.use_privatekey_file('test.key')
 context.use_certificate_file('test.crt')
 
 session_manager = nupay.ServerSessionManager(config)
+user_manager = nupay.ServerUserManager(users_config)
+
 
 def check_auth(username, password):
-    if username == 'admin' and password == 'secret':
-        return True
-    return username == 'admin2' and password == 'secret'
+    if username in user_manager.users: 
+        user = user_manager.users[username]
+        return user_manager.check_password(user, password)
+    return False
 
 def authenticate():
     """Sends a 401 response that enables basic auth"""
-    return Response(jsonify({'error': 'Login required'}), 401,
+    return make_response(jsonify({'error': 'Login required'}), 401,
     {'WWW-Authenticate': 'Basic realm="Login Required"'})
 
 def requires_auth(f):
@@ -278,7 +290,7 @@ def delete_transaction(session_id, transaction_id):
     return make_response(jsonify({}), 204)
 
 if __name__ == '__main__':
-    app.run(debug = True, ssl_context=context)
+    app.run(debug = False, ssl_context=context)
 
 
 
