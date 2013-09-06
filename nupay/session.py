@@ -2,6 +2,9 @@ import requests
 import sys
 import json
 import logging
+import ssl
+import time
+
 from decimal import Decimal
 
 class SessionConnectionError(Exception):
@@ -13,7 +16,10 @@ class NotEnoughCreditError(Exception):
 class RollbackError(Exception):
     pass
 
-class TimeoutError(Exception):
+class CashTimeoutError(Exception):
+    pass
+
+class ConnectionError(Exception):
     pass
 
 headers = {'content-type': 'application/json'}
@@ -52,7 +58,13 @@ class Session(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        self.delete()
+        for i in range(5):
+            try:
+                self.delete()
+                break
+            except Exception as e:
+                self._logger.warning("Exception while deleting the session", exc_info=True)
+            time.sleep(1)
     
     def _update(self):
         r = requests.get(self._session_uri, verify=verify, timeout=timeout, auth=auth)
@@ -75,15 +87,35 @@ class Session(object):
 
     def cash(self, amount):
         amount = str(amount)
-        r = requests.post(self._session_uri + '/transactions', verify=verify, timeout=timeout, auth=auth, headers=headers,
-                data = json.dumps({"amount": amount}))
-        
+        try:
+            self._in_cash = True
+            r = requests.post(self._session_uri + '/transactions', verify=verify, timeout=timeout, auth=auth, headers=headers,
+                    data = json.dumps({"amount": amount}))
+            self._in_cash = False
+        except (requests.exceptions.SSLError, ssl.SSLError) as e:
+            self._logger.warning("SSLError", exc_info=True)
+            if str(e.message) == "The read operation timed out":
+                raise CashTimeoutError("Network timed out while cashing. Timestamp: %f"%time.time()) 
+            elif str(e.message) == "The handshake operation timed out":
+                raise ConnectionError("Handshake failed before cashing") 
+            else:
+                self._logger.warning("Unknown SSL exception while cashing: %s" % str(e.message), exc_info=True)
+                raise e
+        except Exception as e:
+            self._logger.warning("Unknown exception while cashing", exc_info=True)
+            raise e
+    
         self._update()
+
         if r.ok:
             return r.headers['Location']
         elif r.status_code == 402:
             amount = r.json()['error']['amount'] 
             raise NotEnoughCreditError(("Missing amount: %.02f Eur"%amount, amount))
+        else:
+            self._logger.warning("Unknown error condition: %s %s", str(r), r.text)
+            raise RuntimeError("Unknown error condition: %s %s", str(r), r.text)
+            
 
     @property
     def total(self):
