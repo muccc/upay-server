@@ -1,6 +1,6 @@
 #!/bin/sh
 
-python create_tokens.py testconfig.cfg 10 > purse
-python check_purse.py testconfig.cfg purse
-python buy.py testconfig.cfg purse 3.3
-python buy.py testconfig.cfg purse 3.3
+python create_tokens.py 10 > purse
+python check_purse.py  purse
+python buy.py purse 3.3
+python buy.py purse 3.3

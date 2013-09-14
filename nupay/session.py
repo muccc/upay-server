@@ -4,6 +4,7 @@ import json
 import logging
 import ssl
 import time
+import ConfigParser
 
 from decimal import Decimal
 
@@ -23,11 +24,16 @@ class ConnectionError(Exception):
     pass
 
 class SessionManager(object):
-    def __init__(self, config):
+    def __init__(self, config_location = '/etc/upay'):
         self._logger = logging.getLogger(__name__)
-        self.config = config
+        self._config_location = config_location
+        self._read_config()
         self.create_session().delete()
- 
+    
+    def _read_config(self):
+        self._config = ConfigParser.RawConfigParser()
+        self._config.read(self._config_location + '/session.cfg')
+
     def create_session(self):
         try:
             s = requests.Session()
@@ -36,7 +42,7 @@ class SessionManager(object):
             s.timeout = 3
             s.headers = {'content-type': 'application/json'}
 
-            r = s.post(self.config.get('API', 'URL') + self.config.get('API', 'pay_session_entry_point'),
+            r = s.post(self._config.get('API', 'URL') + self._config.get('API', 'pay_session_entry_point'),
                     data = json.dumps({"name": ""}))
 
             if not r.ok:

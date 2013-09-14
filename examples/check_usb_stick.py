@@ -1,15 +1,11 @@
 import nupay
 import time
 import logging
-import ConfigParser
-import sys
 
 logging.basicConfig(level=logging.DEBUG)
-config = ConfigParser.RawConfigParser()
-config.read(sys.argv[1])
 
 token_reader = nupay.USBTokenReader()
-session_manager = nupay.SessionManager(config)
+session_manager = nupay.SessionManager()
 
 while True:
     print("Waiting for purse")
