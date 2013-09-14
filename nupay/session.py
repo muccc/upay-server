@@ -22,11 +22,6 @@ class CashTimeoutError(Exception):
 class ConnectionError(Exception):
     pass
 
-headers = {'content-type': 'application/json'}
-auth=("matemat", "secret")
-timeout=3
-verify="test.crt"
-
 class SessionManager(object):
     def __init__(self, config):
         self._logger = logging.getLogger(__name__)
@@ -35,20 +30,28 @@ class SessionManager(object):
  
     def create_session(self):
         try:
-            r = requests.post(self.config.get('API', 'URL') + self.config.get('API', 'pay_session_entry_point'),
-                    verify = verify, timeout = timeout, auth= auth, headers = headers, data = json.dumps({"name": ""}))
+            s = requests.Session()
+            s.auth = ('matemat', 'secret')
+            s.verify = "test.crt"
+            s.timeout = 3
+            s.headers = {'content-type': 'application/json'}
+
+            r = s.post(self.config.get('API', 'URL') + self.config.get('API', 'pay_session_entry_point'),
+                    data = json.dumps({"name": ""}))
+
             if not r.ok:
                 raise SessionConnectionError()
             session_uri = r.json()['session']['uri']
-            return Session(session_uri)
+            return Session(s, session_uri)
         except Exception as e:
             self._logger.warning("Can not connect to the server", exc_info=True)
             raise SessionConnectionError(e)
  
 
 class Session(object):
-    def __init__(self, session_uri):
+    def __init__(self, session, session_uri):
         self._logger = logging.getLogger(__name__)
+        self._session = session
         self._session_uri = session_uri
         self._tokens = []
         self._total = 0
@@ -67,16 +70,16 @@ class Session(object):
             time.sleep(1)
     
     def _update(self):
-        r = requests.get(self._session_uri, verify=verify, timeout=timeout, auth=auth)
+        r = self._session.get(self._session_uri)
         if r.ok:
             self._total = r.json()['session']['total']
             self._credit = r.json()['session']['credit']
     
     def delete(self):
-        r = requests.delete(self._session_uri, verify=verify, timeout=timeout, auth=auth)
+        r = self._session.delete(self._session_uri)
 
     def validate_tokens(self, tokens, callback = None):
-        requests.post(self._session_uri + '/tokens', verify = verify, timeout = timeout, auth = auth, headers = headers,
+        self._session.post(self._session_uri + '/tokens',
             data = json.dumps({"tokens": map(str,tokens)}))
         self._update()
         return self._credit
@@ -89,7 +92,7 @@ class Session(object):
         amount = str(amount)
         try:
             self._in_cash = True
-            r = requests.post(self._session_uri + '/transactions', verify=verify, timeout=timeout, auth=auth, headers=headers,
+            r = self._session.post(self._session_uri + '/transactions',
                     data = json.dumps({"amount": amount}))
             self._in_cash = False
         except (requests.exceptions.SSLError, ssl.SSLError) as e:
@@ -122,7 +125,7 @@ class Session(object):
         return self._total
 
     def rollback(self, transaction_uri):
-        r = requests.delete(transaction_uri, verify=verify, timeout=timeout, auth=auth, headers=headers)
+        r = self._session.delete(transaction_uri, verify=verify, timeout=timeout, auth=auth, headers=headers)
         self._update()
         if not r.ok:
             raise RollbackError('Unknown rollback error')
