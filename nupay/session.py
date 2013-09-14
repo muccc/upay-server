@@ -37,9 +37,9 @@ class SessionManager(object):
     def create_session(self):
         try:
             s = requests.Session()
-            s.auth = ('matemat', 'secret')
-            s.verify = "test.crt"
-            s.timeout = 3
+            s.auth = (self._config.get('API', 'username'), self._config.get('API', 'password'))
+            s.verify = self._config_location + '/' + self._config.get('API', 'certificate')
+            s.timeout = self._config.getint('API', 'timeout')
             s.headers = {'content-type': 'application/json'}
 
             r = s.post(self._config.get('API', 'URL') + self._config.get('API', 'pay_session_entry_point'),
