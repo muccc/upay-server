@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from flask import Flask, jsonify, Response, request, abort, url_for
 from flask import make_response
+import flask
 from OpenSSL import SSL
 from functools import wraps
 import time
@@ -26,7 +27,7 @@ context = SSL.Context(SSL.SSLv23_METHOD)
 context.use_privatekey_file('test.key')
 context.use_certificate_file('test.crt')
 
-session_manager = nupay.ServerSessionManager(config)
+upay_session_manager = nupay.ServerSessionManager(config)
 user_manager = nupay.ServerUserManager(users_config)
 
 
@@ -36,7 +37,7 @@ def check_auth(username, password):
         return user_manager.check_password(user, password)
     return False
 
-def authenticate():
+def request_authenticate():
     """Sends a 401 response that enables basic auth"""
     return make_response(jsonify({'error': 'Login required'}), 401,
     {'WWW-Authenticate': 'Basic realm="Login Required"'})
@@ -44,9 +45,12 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
+        if 'username' not in flask.session:
+            auth = request.authorization
+            if auth and check_auth(auth.username, auth.password):
+                flask.session['username'] = auth.username
+            else:
+                return request_authenticate()
         return f(*args, **kwargs)
     return decorated
 
@@ -58,7 +62,7 @@ def check_session_id_and_transaction_id(f):
 
         if session_id not in sessions.keys():
             abort(404)
-        if sessions[session_id]['owner'] != request.authorization.username: 
+        if sessions[session_id]['owner'] != flask.session['username']:
             abort(403)
         
         if 'transaction_id' in kwargs:
@@ -81,6 +85,7 @@ def get_global_lock(f):
 
 app = Flask(__name__)
 
+app.secret_key = str(uuid.uuid4())
 
 @app.errorhandler(404)
 def not_found(error):
@@ -104,32 +109,23 @@ def get_uri_for_transaction(session, transaction_id):
             transaction_id = transaction_id, _external = True)
 
 def make_public_session(session):
-    public_fields = ('id', 'name', 'owner', 'timeout')
-    public_session = {}
-    for field in session:
-        if field in public_fields:
-            public_session[field] = session[field]
-        if field == 'id':
-            public_session['uri'] = get_uri_for_session(session)
-        elif field == 'timeout':
-            public_session['timeout'] = int(public_session['timeout'] - time.time())
-        if field == 'database_session':
-            database_session = session[field]
-            public_session['total'] = database_session.total
-            public_session['credit'] = database_session.credit
+    public_fields = ('id', 'uri', 'name', 'owner', 'timeout')
+    public_session = {field: session[field] for field in public_fields}
+    public_session['timeout'] = int(session['timeout'] - time.time())
+    
+    database_session = session['database_session']
+    public_session['total'] = database_session.total
+    public_session['credit'] = database_session.credit
 
     return public_session
 
 def make_public_transaction(transaction):
     public_fields = ('id', 'amount', 'used_tokens')
-    public_transaction = {}
+    public_transaction = \
+            {field: transaction[field] for field in public_fields}
 
-    for field in transaction:
-        if field in public_fields:
-            public_transaction[field] = transaction[field]
-        if field == 'used_tokens':
-            public_transaction['used_tokens'] = \
-                    map(str, transaction[field])
+    public_transaction['used_tokens'] = \
+            map(str, transaction['used_tokens'])
 
     return public_transaction
 
@@ -155,7 +151,7 @@ def reset_session_timeout(session):
 @app.route('/v1.0/status', methods = ['GET'])
 @get_global_lock
 def get_status():
-    return jsonify( { 'status': {'pay': {'sessions': len(sessions)}} } )
+    return jsonify({'status': {'pay': {'sessions': len(sessions)}}})
 
 @app.route('/v1.0/pay/sessions', methods = ['POST'])
 @get_global_lock
@@ -164,17 +160,17 @@ def post_session():
     if not request.json or not 'name' in request.json:
         abort(400)
 
-    id = str(uuid.uuid4())
-    database_session = session_manager.create_session()
-
-    session = {'id': id, 'name': request.json['name'], 'owner': request.authorization.username,
-                'database_session': database_session, 'transactions': {}}
+    session = { 'id': str(uuid.uuid4()),
+                'name': request.json['name'],
+                'owner': flask.session['username'],
+                'database_session': 
+                        upay_session_manager.create_session(),
+                'transactions': {} }
+    session['uri'] = get_uri_for_session(session)
     reset_session_timeout(session);
-    sessions[id] = session
-    location = get_uri_for_session(session)
-
-    response = get_session(session_id=id)
-    response.headers['Location'] = location
+    sessions[session['id']] = session
+    response = get_session(session_id=session['id'])
+    response.headers['Location'] = session['uri']
     response.status_code = 201
     return response
 
@@ -183,7 +179,8 @@ def post_session():
 @requires_auth
 @check_session_id_and_transaction_id
 def get_session(session_id):
-    return make_response(jsonify({'session': make_public_session(sessions[session_id])}))
+    return make_response(jsonify(
+            {'session': make_public_session(sessions[session_id])}))
 
 @app.route('/v1.0/pay/sessions/<session_id>/keepalive', methods = ['POST'])
 @get_global_lock
