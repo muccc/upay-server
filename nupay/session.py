@@ -43,7 +43,8 @@ class SessionManager(object):
             s.headers = {'content-type': 'application/json'}
 
             r = s.post(self._config.get('API', 'URL') + self._config.get('API', 'pay_session_entry_point'),
-                    data = json.dumps({"name": ""}))
+                    data = json.dumps({"name": ""}),
+                    timeout = s.timeout)
 
             if not r.ok:
                 raise SessionConnectionError()
@@ -76,17 +77,20 @@ class Session(object):
             time.sleep(1)
     
     def _update(self):
-        r = self._session.get(self._session_uri)
+        r = self._session.get(self._session_uri,
+                timeout = self._session.timeout)
         if r.ok:
             self._total = r.json()['session']['total']
             self._credit = r.json()['session']['credit']
     
     def delete(self):
-        r = self._session.delete(self._session_uri)
+        r = self._session.delete(self._session_uri,
+                timeout = self._session.timeout)
 
     def validate_tokens(self, tokens, callback = None):
         self._session.post(self._session_uri + '/tokens',
-            data = json.dumps({"tokens": map(str,tokens)}))
+                data = json.dumps({"tokens": map(str,tokens)}),
+                timeout = self._session.timeout)
         self._update()
         return self._credit
 
@@ -99,7 +103,9 @@ class Session(object):
         try:
             self._in_cash = True
             r = self._session.post(self._session_uri + '/transactions',
-                    data = json.dumps({"amount": amount}))
+                    data = json.dumps({"amount": amount}),
+                    timeout = self._session.timeout)
+
             self._in_cash = False
         except (requests.exceptions.SSLError, ssl.SSLError) as e:
             self._logger.warning("SSLError", exc_info=True)
@@ -131,7 +137,8 @@ class Session(object):
         return self._total
 
     def rollback(self, transaction_uri):
-        r = self._session.delete(transaction_uri, verify=verify, timeout=timeout, auth=auth, headers=headers)
+        r = self._session.delete(transaction_uri,
+                timeout = self._session.timeout)
         self._update()
         if not r.ok:
             raise RollbackError('Unknown rollback error')
