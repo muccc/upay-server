@@ -150,4 +150,37 @@ class Session(object):
         if not r.ok:
             raise RollbackError('Unknown rollback error')
 
+    def create_tokens(self, amount):
+        amount = str(-amount)
+        try:
+            r = self._session.post(self._session_uri + '/transactions',
+                    data = json.dumps({"amount": amount}),
+                    timeout = self._session.timeout)
 
+        except (requests.exceptions.SSLError, ssl.SSLError) as e:
+            self._logger.warning("SSLError", exc_info=True)
+            if str(e.message) == "The read operation timed out":
+                raise CashTimeoutError("Network timed out while creating tokens. Timestamp: %f"%time.time()) 
+            elif str(e.message) == "The handshake operation timed out":
+                raise ConnectionError("Handshake failed before creating tokens") 
+            else:
+                self._logger.warning("Unknown SSL exception while creating tokens: %s" % str(e.message), exc_info=True)
+                raise e
+        except Exception as e:
+            self._logger.warning("Unknown exception while creating tokens", exc_info=True)
+            raise e
+    
+        self._update()
+
+        if r.ok:
+            if 'Location' not in r.headers:
+                 raise SessionError("Missing field 'Location' in response")
+            return r.headers['Location'], r.json()
+        elif r.status_code == 403:
+            raise SessionError("Server reported 403: Not Allowed")
+        elif r.status_code == 404:
+            raise SessionError("Server reported 404: Not Found")
+        else:
+            self._logger.warning("Unknown error condition: %s %s", str(r), r.text)
+            raise RuntimeError("Unknown error condition: %s %s", str(r), r.text)
+     

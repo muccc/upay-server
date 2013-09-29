@@ -3,6 +3,7 @@ import psycopg2
 from session import SessionConnectionError, NotEnoughCreditError, RollbackError
 
 from decimal import Decimal
+from token import Token
 
 class ServerSessionManager(object):
     def __init__(self, config):
@@ -58,7 +59,7 @@ class Session(object):
             return False
 
     def _token_exists(self, token):
-        self._db_cur.execute('SELECT hash FROM tokens WHERE hash=%s', (token.hash))
+        self._db_cur.execute('SELECT hash FROM tokens WHERE hash=%s', (token.hash,))
         ret = self._db_cur.fetchone()
         self._logger.debug('fetch returned %s' % str(ret))
         if ret:
@@ -123,16 +124,17 @@ class Session(object):
         map(self._valid_tokens.append, cashed_tokens)
         self._db.commit()
 
-    def _add_token(self, token):
-        if not self._token_exists(token):
-            self._db_cur.execute('INSERT INTO tokens VALUES (%s, NULL, NOW())', (token.hash,))
-            self._wait()
-
-    def add_tokens(self, tokens):
-        for token in tokens:
-            self._add_token(token)
-        self._db.commit() 
-
-    def create_tokens(amount):
+    def create_tokens(self, amount):
         amount = Decimal(amount)
-        print "creating tokens for %d Eur", amount
+        print "creating tokens for %s Eur", str(amount)
+        
+        tokens = []
+        while amount >= (len(tokens) + 1) * self._token_value:
+            token = Token()
+            if not self._token_exists(token):
+                self._db_cur.execute('INSERT INTO tokens VALUES (%s, NULL, NOW())', (token.hash,))
+                tokens.append(token)
+        self._db.commit()
+
+        return tokens
+

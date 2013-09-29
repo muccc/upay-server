@@ -120,12 +120,12 @@ def make_public_session(session):
     return public_session
 
 def make_public_transaction(transaction):
-    public_fields = ('id', 'amount', 'used_tokens')
+    public_fields = ('id', 'amount', 'tokens')
     public_transaction = \
             {field: transaction[field] for field in public_fields}
 
-    public_transaction['used_tokens'] = \
-            map(str, transaction['used_tokens'])
+    public_transaction['tokens'] = \
+            map(str, transaction['tokens'])
 
     return public_transaction
 
@@ -258,9 +258,9 @@ def post_transaction(session_id):
 
     try:
         if amount >= 0:
-            transaction['used_tokens'] = session['database_session'].cash(amount)
+            transaction['tokens'] = session['database_session'].cash(amount)
         else:
-            transaction['created_tokens'] = session['database_session'].create_tokens(amount)
+            transaction['tokens'] = session['database_session'].create_tokens(-amount)
             
         session['transactions'][transaction_id] = transaction
         
@@ -293,7 +293,7 @@ def delete_transaction(session_id, transaction_id):
     session = sessions[session_id]
     reset_session_timeout(session)
     session['database_session'].rollback(
-            session['transactions'][transaction_id]['used_tokens'])
+            session['transactions'][transaction_id]['tokens'])
     del session['transactions'][transaction_id]
     return make_response(jsonify({}), 204)
 
