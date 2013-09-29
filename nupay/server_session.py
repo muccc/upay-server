@@ -133,4 +133,6 @@ class Session(object):
             self._add_token(token)
         self._db.commit() 
 
-
+    def create_tokens(amount):
+        amount = Decimal(amount)
+        print "creating tokens for %d Eur", amount

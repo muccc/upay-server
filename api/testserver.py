@@ -243,6 +243,13 @@ def post_transaction(session_id):
         amount = Decimal(request.json['amount'])
     except:
         abort(400)
+    
+    if amount >= 0:
+        if not user_manager.users[flask.session['username']].role == 'vending_machine':
+            abort(403)
+    else:
+        if not user_manager.users[flask.session['username']].role == 'charging_station':
+            abort(403)
 
     session = sessions[session_id]
     reset_session_timeout(session)
@@ -250,7 +257,11 @@ def post_transaction(session_id):
     transaction = {'amount': amount, 'id': transaction_id}
 
     try:
-        transaction['used_tokens'] = session['database_session'].cash(amount)
+        if amount >= 0:
+            transaction['used_tokens'] = session['database_session'].cash(amount)
+        else:
+            transaction['created_tokens'] = session['database_session'].create_tokens(amount)
+            
         session['transactions'][transaction_id] = transaction
         
         response = get_transaction(session_id=session_id,
