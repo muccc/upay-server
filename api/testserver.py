@@ -153,7 +153,7 @@ def reset_session_timeout(session):
 def get_status():
     return jsonify({'status': {'pay': {'sessions': len(sessions)}}})
 
-@app.route('/v1.0/pay/sessions', methods = ['POST'])
+@app.route('/v1.0/sessions', methods = ['POST'])
 @get_global_lock
 @requires_auth
 def post_session():
@@ -174,7 +174,7 @@ def post_session():
     response.status_code = 201
     return response
 
-@app.route('/v1.0/pay/sessions/<session_id>', methods = ['GET'])
+@app.route('/v1.0/sessions/<session_id>', methods = ['GET'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
@@ -182,7 +182,7 @@ def get_session(session_id):
     return make_response(jsonify(
             {'session': make_public_session(sessions[session_id])}))
 
-@app.route('/v1.0/pay/sessions/<session_id>/keepalive', methods = ['POST'])
+@app.route('/v1.0/sessions/<session_id>/keepalive', methods = ['POST'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
@@ -195,7 +195,7 @@ def post_session_keepalive(session_id):
 
     return response
 
-@app.route('/v1.0/pay/sessions/<session_id>', methods = ['DELETE'])
+@app.route('/v1.0/sessions/<session_id>', methods = ['DELETE'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
@@ -203,7 +203,7 @@ def delete_session(session_id):
     remove_session(session_id)
     return make_response(jsonify({}), 204)
 
-@app.route('/v1.0/pay/sessions/<session_id>/tokens', methods = ['POST'])
+@app.route('/v1.0/sessions/<session_id>/tokens', methods = ['POST'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
@@ -212,7 +212,7 @@ def post_tokens(session_id):
         abort(400)
     if not type(request.json['tokens']) == type([]):
         abort(400)
-
+    
     session = sessions[session_id]
     reset_session_timeout(session)
     tokens = map(nupay.Token,  request.json['tokens'])
@@ -224,7 +224,7 @@ def post_tokens(session_id):
     response.status_code = 201
     return response
 
-@app.route('/v1.0/pay/sessions/<session_id>/valid_tokens', methods = ['GET'])
+@app.route('/v1.0/sessions/<session_id>/valid_tokens', methods = ['GET'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
@@ -232,7 +232,7 @@ def get_valid_tokens(session_id):
     session = sessions[session_id]
     return make_response(jsonify( { 'valid_tokens': map(str, session['database_session'].valid_tokens) } ))
 
-@app.route('/v1.0/pay/sessions/<session_id>/transactions', methods = ['POST'])
+@app.route('/v1.0/sessions/<session_id>/transactions', methods = ['POST'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
@@ -265,7 +265,7 @@ def post_transaction(session_id):
         data['amount'] = e.message[1]
         return make_response(jsonify({'error': data}), 402)
 
-@app.route('/v1.0/pay/sessions/<session_id>/transaction/<transaction_id>', methods = ['GET'])
+@app.route('/v1.0/sessions/<session_id>/transaction/<transaction_id>', methods = ['GET'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
@@ -274,7 +274,7 @@ def get_transaction(session_id, transaction_id):
     transaction = make_public_transaction(transaction)
     return make_response(jsonify({'transaction': transaction}))
 
-@app.route('/v1.0/pay/sessions/<session_id>/transaction/<transaction_id>', methods = ['DELETE'])
+@app.route('/v1.0/sessions/<session_id>/transaction/<transaction_id>', methods = ['DELETE'])
 @get_global_lock
 @requires_auth
 @check_session_id_and_transaction_id
