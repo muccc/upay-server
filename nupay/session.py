@@ -23,6 +23,9 @@ class CashTimeoutError(Exception):
 class ConnectionError(Exception):
     pass
 
+class SessionError(Exception):
+    pass
+
 class SessionManager(object):
     def __init__(self, config_location = '/etc/upay'):
         self._logger = logging.getLogger(__name__)
@@ -123,10 +126,14 @@ class Session(object):
         self._update()
 
         if r.ok:
+            if 'Location' not in r.headers:
+                 raise SessionError("Missing field 'Location' in response")
             return r.headers['Location']
         elif r.status_code == 402:
             amount = r.json()['error']['amount'] 
             raise NotEnoughCreditError(("Missing amount: %.02f Eur"%amount, amount))
+        elif r.status_code == 404:
+            raise SessionError("Server reported 404: Not Found")
         else:
             self._logger.warning("Unknown error condition: %s %s", str(r), r.text)
             raise RuntimeError("Unknown error condition: %s %s", str(r), r.text)
