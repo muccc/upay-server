@@ -144,7 +144,7 @@ class ServerSession(object):
 
     def create_tokens(self, amount):
         amount = Decimal(amount)
-        print "creating tokens for %s Eur", str(amount)
+        self._logger.info("creating tokens for %s Eur", str(amount))
         
         tokens = []
         while amount >= (len(tokens) + 1) * self._token_value:
