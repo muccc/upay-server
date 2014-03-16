@@ -31,6 +31,24 @@ class ServerSessionManager(object):
     def create_session(self):
         return ServerSession(self.open_connection())
 
+    def bootstrap_db(self):
+        if self.config.get('Database','allow_bootstrap') != 'True':
+            self.logger.error('Bootstrapping is disabled in the configuration')
+            return
+
+        db = self.open_connection()
+        db_cur = db.cursor()
+        db_cur.execute('''
+            DROP TABLE IF EXISTS tokens;
+            CREATE TABLE tokens (
+                hash VARCHAR PRIMARY KEY,
+                used DATE NULL,
+                created DATE
+            )
+        ''')
+        db.commit()
+        db.close()
+
 class ServerSession(object):
     def __init__(self, db):
         self._logger = logging.getLogger(__name__)
