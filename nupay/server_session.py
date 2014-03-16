@@ -116,7 +116,7 @@ class Session(object):
 
         for token in cashed_tokens:
             self._logger.info('Marking %s unused' % token)
-            self._db_cur.execute('UPDATE tokens SET used=NULL WHERE hash=%s', (token.hash,))
+            self._db_cur.execute('UPDATE tokens SET used=NULL WHERE hash=%s AND used IS NOT NULL', (token.hash,))
             if self._db_cur.rowcount != 1:
                 raise RollbackError('Unknown rollback error')
         
