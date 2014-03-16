@@ -31,7 +31,11 @@ class SessionManager(object):
         self._logger = logging.getLogger(__name__)
         self._config_location = config_location
         self._read_config()
-        self.create_session().delete()
+        try:
+            self.create_session().delete()
+        except Exception as e:
+            self._logger.warning("Can not connect to the server", exc_info=True)
+            raise SessionConnectionError(e)
     
     def _read_config(self):
         self._config = ConfigParser.RawConfigParser()
