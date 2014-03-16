@@ -29,9 +29,9 @@ class ServerSessionManager(object):
             raise SessionConnectionError(e)
  
     def create_session(self):
-        return Session(self.open_connection())
+        return ServerSession(self.open_connection())
 
-class Session(object):
+class ServerSession(object):
     def __init__(self, db):
         self._logger = logging.getLogger(__name__)
         self._db = db
