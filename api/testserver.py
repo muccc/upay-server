@@ -120,12 +120,9 @@ def make_public_session(session):
     return public_session
 
 def make_public_transaction(transaction):
-    public_fields = ('id', 'amount', 'tokens')
+    public_fields = ('id', 'amount')
     public_transaction = \
             {field: transaction[field] for field in public_fields}
-
-    public_transaction['tokens'] = \
-            map(str, transaction['tokens'])
 
     return public_transaction
 
@@ -216,8 +213,8 @@ def post_tokens(session_id):
     session = sessions[session_id]
     reset_session_timeout(session)
     tokens = map(nupay.Token,  request.json['tokens'])
-    unsused_tokens = filter(is_token_unused, tokens)
-    session['database_session'].validate_tokens(unsused_tokens)
+    unused_tokens = filter(is_token_unused, tokens)
+    session['database_session'].validate_hashes([t.hash for t in unused_tokens])
 
     response = get_valid_tokens(session_id=session_id)
     response.headers['Location'] = get_uri_for_valid_tokens(session)
