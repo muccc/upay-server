@@ -1,19 +1,17 @@
+#!/usr/bin/env python
+
 import sys
 import nupay
 from decimal import Decimal
-#import logging
+import logging
 
-#logging.basicConfig(level=logging.DEBUG)
-#tokens = []
-#for i in range(int(sys.argv[1])):
-#    tokens.append(nupay.Token())
+logging.basicConfig(level=logging.ERROR)
 
-amount = Decimal(sys.argv[1])
+config_dir = sys.argv[1]
+amount = Decimal(sys.argv[2])
 
-tokens = []
-with nupay.SessionManager().create_session() as session:
+with nupay.SessionManager(config_dir).create_session() as session:
     tokens = session.create_tokens(amount)[1]['transaction']['tokens']
-
-for token in tokens:
-    print token
+    for token in tokens:
+        print token
 
