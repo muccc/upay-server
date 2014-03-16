@@ -10,11 +10,8 @@ import nupay
 def db_config():
     config = ConfigParser.RawConfigParser()
     config.add_section("Database")
-    config.set("Database", "db", "testtokendb")
-    config.set("Database", "host", "localhost")
-    config.set("Database", "port", "5432")
-    config.set("Database", "user", "testuser")
-    config.set("Database", "password", "fnord23")
+    config.set("Database", "url", "sqlite:///:memory:")
+    #config.set("Database", "url", "postgresql://testuser:fnord23@localhost:5432/testtokendb")
     config.set("Database", "allow_bootstrap", "True")
     return config
 
@@ -35,7 +32,7 @@ class SessionManagerTest(unittest.TestCase):
         self.session_manager = nupay.ServerSessionManager(self.config)
 
     def test_create_bad_session_mamager(self):
-        self.config.set("Database", "password", "fnord223")
+        self.config.set("Database", "url", "postgresql://testuser:fnord233@localhost:5432/testtokendb")
         self.assertRaises(nupay.SessionConnectionError, nupay.ServerSessionManager, self.config)
 
 class SessionTest(unittest.TestCase):
@@ -56,9 +53,9 @@ class SessionTest(unittest.TestCase):
         session.create_tokens(Decimal(5))
         session.close()
  
-        tokens = [nupay.Token(), nupay.Token()]
+        hashes = [nupay.Token().hash, nupay.Token().hash]
         session = self.session_manager.create_session()
-        credit = session.validate_tokens(tokens)
+        credit = session.validate_hashes(hashes)
         self.assertEqual(credit, 0)
         session.close()
     
@@ -70,35 +67,38 @@ class SessionTest(unittest.TestCase):
     def test_good_validation(self):
         session = self.session_manager.create_session()
         tokens = session.create_tokens(Decimal(1))
+        hashes = [t.hash for t in tokens]
         session.close()
         
         session = self.session_manager.create_session()
-        credit = session.validate_tokens(tokens)
+        credit = session.validate_hashes(hashes)
         self.assertEqual(credit, Decimal('1'))
         session.close()
  
     def test_double_validation(self):
         session = self.session_manager.create_session()
         tokens = session.create_tokens(Decimal(1))
+        hashes = [t.hash for t in tokens]
         session.close()
         
         session = self.session_manager.create_session()
-        credit = session.validate_tokens(tokens)
+        credit = session.validate_hashes(hashes)
         self.assertEqual(credit, Decimal('1'))
         session.close()
  
         session = self.session_manager.create_session()
-        credit = session.validate_tokens(tokens)
+        credit = session.validate_hashes(hashes)
         self.assertEqual(credit, Decimal('1'))
         session.close()
        
     def test_bad_cash(self):
         session = self.session_manager.create_session()
         tokens = session.create_tokens(Decimal(2))
+        hashes = [t.hash for t in tokens]
         session.close()
 
         session = self.session_manager.create_session()
-        session.validate_tokens(tokens)
+        session.validate_hashes(hashes)
         self.assertRaises(nupay.NotEnoughCreditError, session.cash, Decimal(2.1))
         self.assertEqual(0, session.total)
         self.assertEqual(Decimal(2), session.credit)
@@ -107,10 +107,11 @@ class SessionTest(unittest.TestCase):
     def test_good_cash(self):
         session = self.session_manager.create_session()
         tokens = session.create_tokens(Decimal(2))
+        hashes = [t.hash for t in tokens]
         session.close()
 
         session = self.session_manager.create_session()
-        session.validate_tokens(tokens)
+        session.validate_hashes(hashes)
         session.cash(Decimal(2.0))
         self.assertEqual(Decimal(2.0), session.total)
         self.assertEqual(Decimal(0), session.credit)
@@ -119,10 +120,11 @@ class SessionTest(unittest.TestCase):
     def test_good_cash_split(self):
         session = self.session_manager.create_session()
         tokens = session.create_tokens(Decimal(2))
+        hashes = [t.hash for t in tokens]
         session.close()
 
         session = self.session_manager.create_session()
-        session.validate_tokens(tokens)
+        session.validate_hashes(hashes)
         session.cash(Decimal(1.0))
         session.cash(Decimal(0.25))
         self.assertRaises(nupay.NotEnoughCreditError, session.cash, Decimal(1.0))
@@ -133,10 +135,11 @@ class SessionTest(unittest.TestCase):
     def test_rollback(self):
         session = self.session_manager.create_session()
         tokens = session.create_tokens(Decimal(2))
+        hashes = [t.hash for t in tokens]
         session.close()
 
         session = self.session_manager.create_session()
-        session.validate_tokens(tokens)
+        session.validate_hashes(hashes)
         session.cash(Decimal(1.0))
         tokens = (session.cash(Decimal(0.25)))
         session.rollback(tokens)
