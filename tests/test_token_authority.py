@@ -88,6 +88,21 @@ class TokenAuthorityTest(unittest.TestCase):
         self.assertEquals(tokens[3].value, Decimal(4))
 
         map(self._ta.validate_token, tokens)
-        
+ 
+    def test_split_token_bad(self):
+        t = nupay.Token(value = Decimal(10))
+        self._ta.create_token(t)
+
+        self.assertRaises(ValueError, self._ta.split_token, t, map(Decimal, (1,2,3)))
+
+        t = nupay.Token(value = Decimal(10))
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.split_token, t, map(Decimal, (1,2,3,4)))
+
+        self._ta.create_token(t)
+        self.assertRaises(TypeError, self._ta.split_token, t, (1,2,3,4))
+        self._ta.validate_token(t)
+
+
+
 if __name__ == '__main__':
     unittest.main()
