@@ -34,6 +34,7 @@ class TokenAuthority(object):
 
     def disconnect(self):
         self._connection.close()
+        self._connection = None
 
     def bootstrap_db(self):
         if self.config.get('Database','allow_bootstrap') != 'True':
@@ -61,6 +62,12 @@ class TokenAuthority(object):
 
         return self._validate_token(token)
 
-
     def _add_token(self, token):
-        pass
+        ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
+        self._execute(ins)
+
+    def _execute(self, statement):
+        if self._connection is None:
+            self.connect()
+        return self._connection.execute(statement)
+
