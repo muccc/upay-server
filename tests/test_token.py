@@ -5,7 +5,7 @@ import tempfile
 import io
 import logging
 import shutil
-
+from decimal import Decimal
 import nupay
 
 class TokenTest(unittest.TestCase):
@@ -20,23 +20,28 @@ class TokenTest(unittest.TestCase):
  
     def test_validation(self):
         self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "foobar")
-        nupay.Token("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686")
-        self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e3300%1375901686")
-        self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e33%1375901686")
-        self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%13759016868")
+        nupay.Token("020.00%745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%1395088098")
+        nupay.Token("000.00%745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%1395088099")
+
+        self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "020.00%745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%139508809")
+        self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "1000.00%745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%139508809")
+        self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "100.00%745bfde3fde:6aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%139508809")
+        self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "00.00%745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%139508809")
 
     def test_hash(self):
-        token = nupay.Token("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686")
-        self.assertEqual(token.hash, "db891851322ff6b04b993af03fda984f3356f64e34abaf73faf7919cae02c1f38c4cd172f6e71414cc25e7f2c331c2cdc4e176e604a2b16686eb7d528671b513")
+        token = nupay.Token("020.00%745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%1395088098")
+        self.assertEqual(token.hash_string, "b15772d0ed237646b769a568245bd7e791f549d38880f58b515be6d8e5eed73c6ff75c97744adc03def5c915f12d9374c28a33f8143a4a916db48149e0d72931")
+        token = nupay.Token(value = Decimal(20))
+        self.assertNotEqual(token.hash_string, "b15772d0ed237646b769a568245bd7e791f549d38880f58b515be6d8e5eed73c6ff75c97744adc03def5c915f12d9374c28a33f8143a4a916db48149e0d72931")
 
     def test_create(self):
-        token1 = nupay.Token()
-        token_string = token1.token
+        token1 = nupay.Token(value = Decimal(20))
+        token_string = token1.token_string
 
         token2 = nupay.Token(token_string)
         self.assertEqual(token2, token1)
         
-        token3 = nupay.Token()
+        token3 = nupay.Token(value = Decimal(5))
         
         self.assertNotEqual(token3, token1)
  
