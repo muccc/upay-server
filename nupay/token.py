@@ -15,6 +15,7 @@ class Token(object):
     MIN_VALUE = Decimal("0.01")
     MAX_VALUE = Decimal("999.99")
     TOKEN_FORMAT = re.compile(r'\d{3}\.\d{2}\%[A-Za-z0-9]{64}\%[0-9]{10}$')
+    HASH_STRING_LENGTH = 128
 
     def __init__(self, token_string = None, value = None):
         self.logger = logging.getLogger(__name__)
