@@ -47,5 +47,20 @@ class TokenAuthorityTest(unittest.TestCase):
         t = self._ta.create_token(Decimal(2))
         self.assertIsInstance(t, nupay.Token)
 
+    def test_void_token(self):
+        t = self._ta.create_token(Decimal(2))
+        self._ta.void_token(t)
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
+
+        t = nupay.Token(value = Decimal("5"))
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
+
+    def test_validate_token(self):
+        t = self._ta.create_token(Decimal(2))
+        self._ta.validate_token(t)
+        
+        t = nupay.Token(value = Decimal("5"))
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
+
 if __name__ == '__main__':
     unittest.main()

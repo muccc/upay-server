@@ -1,6 +1,6 @@
 import logging
 import sqlalchemy
-from sqlalchemy import Table, Column, DateTime, String, MetaData
+from sqlalchemy import Table, Column, DateTime, String, MetaData, select
 
 from datetime import datetime
 from decimal import Decimal
@@ -8,12 +8,15 @@ from decimal import Decimal
 from session import SessionConnectionError
 from token import Token
 
+class NoValidTokenFoundError(Exception):
+    pass
+
 class TokenAuthority(object):
     def __init__(self, config):
         self._logger = logging.getLogger(__name__)
         self.config = config
         try:
-            self._engine = sqlalchemy.create_engine(config.get('Database', 'url'), echo = False)
+            self._engine = sqlalchemy.create_engine(config.get('Database', 'url'), echo = True)
             self.connect()
             self.disconnect()
         except Exception as e:
@@ -60,11 +63,22 @@ class TokenAuthority(object):
         if type(token) != Token:
             raise TypeError('token must be of type <Token>')
 
-        return self._validate_token(token)
+        self._validate_token(token)
 
     def _add_token(self, token):
         ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
         self._execute(ins)
+
+    def _void_token(self, token):
+        self._validate_token(token)
+        statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).values(used = datetime.now())
+        r = self._execute(statement)
+        print r
+    
+    def _validate_token(self, token):
+        result = self._execute(select([self._tokens]).where(self._tokens.c.hash == token.hash_string).where(self._tokens.c.used == None)).fetchone()
+        if result == None:
+            raise NoValidTokenFoundError('Token not found')
 
     def _execute(self, statement):
         if self._connection is None:
