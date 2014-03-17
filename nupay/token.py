@@ -14,7 +14,7 @@ class Token(object):
     
     MIN_VALUE = Decimal("0.01")
     MAX_VALUE = Decimal("999.99")
-    TOKEN_FORMAT = re.compile(r'\d{3}\.\d{2}\%[A-Za-z0-9]{64}\%[0-9]{10}$')
+    TOKEN_FORMAT = re.compile(r'(\d{3}\.\d{2})\%[A-Za-z0-9]{64}\%[0-9]{10}$')
     HASH_STRING_LENGTH = 128
 
     def __init__(self, token_string = None, value = None):
@@ -29,18 +29,20 @@ class Token(object):
         token_string = token_string.strip()
 
         Token._check_token_string_format(token_string)
-
         self._token_string = token_string
         self._hash_string = None
+        self._value = None
 
         self.logger.debug("New token: %s" % token_string)
     
     @staticmethod
     def _check_token_string_format(token_string):
-        if Token.TOKEN_FORMAT.match(token_string) is None:    
+        match = Token.TOKEN_FORMAT.match(token_string)
+        if match is None:
             logger = logging.getLogger(__name__)
             logger.warning("Token %s is badly formatted" % token_string)
             raise BadTokenFormatError()
+        return Decimal(match.group(1))
 
     @staticmethod
     def _create_token_string(value):
@@ -71,6 +73,13 @@ class Token(object):
     @property
     def token_string(self):
         return self._token_string;
+    
+    @property
+    def value(self):
+        if self._value is None: 
+            match = Token.TOKEN_FORMAT.match(self.token_string)
+            self._value = Decimal(match.group(1))
+        return self._value
 
     def __eq__(self, other):
         return other._token_string == self._token_string

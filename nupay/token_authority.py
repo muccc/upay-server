@@ -1,6 +1,7 @@
 import logging
 import sqlalchemy
 from sqlalchemy import Table, Column, DateTime, String, MetaData, select
+from functools import partial
 
 from datetime import datetime
 from decimal import Decimal
@@ -16,7 +17,8 @@ class TokenAuthority(object):
         self._logger = logging.getLogger(__name__)
         self.config = config
         try:
-            self._engine = sqlalchemy.create_engine(config.get('Database', 'url'), echo = True)
+            #self._engine = sqlalchemy.create_engine(config.get('Database', 'url'), echo = True)
+            self._engine = sqlalchemy.create_engine(config.get('Database', 'url'), echo = False)
             self.connect()
             self.disconnect()
         except Exception as e:
@@ -47,11 +49,8 @@ class TokenAuthority(object):
         self._metadata.drop_all(self._engine)
         self._metadata.create_all(self._engine)
 
-    def create_token(self, value):
-        token = Token(value = value)
-
+    def create_token(self, token):
         self._add_token(token)
-        return token
 
     def void_token(self, token):
         if type(token) != Token:
@@ -64,6 +63,23 @@ class TokenAuthority(object):
             raise TypeError('token must be of type <Token>')
 
         self._validate_token(token)
+    
+    def transact_token(self, token):
+        return self.split_token(token, (token.value, ))[0]
+
+    def split_token(self, token, values):
+        total_split_value = sum(values)
+        if total_split_value != token.value:
+            raise ValueError("Split value does not match token value")
+        
+        split_tokens = map(lambda value: Token(value = value), values)
+        
+        with self._connection.begin() as trans:
+            self.validate_token(token)
+            self.void_token(token)
+            map(self.create_token, split_tokens)
+
+        return split_tokens 
 
     def _add_token(self, token):
         ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
@@ -73,7 +89,6 @@ class TokenAuthority(object):
         self._validate_token(token)
         statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).values(used = datetime.now())
         r = self._execute(statement)
-        print r
     
     def _validate_token(self, token):
         result = self._execute(select([self._tokens]).where(self._tokens.c.hash == token.hash_string).where(self._tokens.c.used == None)).fetchone()
@@ -81,7 +96,5 @@ class TokenAuthority(object):
             raise NoValidTokenFoundError('Token not found')
 
     def _execute(self, statement):
-        if self._connection is None:
-            self.connect()
         return self._connection.execute(statement)
 
