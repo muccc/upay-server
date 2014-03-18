@@ -54,18 +54,18 @@ class USBTokenReaderTest(unittest.TestCase):
     def test_new_device_with_purse_dup(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
+            purse.write("023.42%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
+            purse.write("023.42%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
  
         tokens = self.token_reader.read_tokens()
         self.assertEqual(1, len(tokens))
-        self.assertEqual(tokens[0].hash, "db891851322ff6b04b993af03fda984f3356f64e34abaf73faf7919cae02c1f38c4cd172f6e71414cc25e7f2c331c2cdc4e176e604a2b16686eb7d528671b513")
+        self.assertEqual(tokens[0].hash_string, "8c696ccc25b1d6f915b44f3f7f039c527fbc615db13e3f2e48baa05440148171ac148df112388b86c8b61482927eaba7a8b1dffe10491b067e11120b7aba82d5")
  
     def test_new_device_with_purse(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
-            purse.write("24fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
+            purse.write("023.42%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
+            purse.write("023.42%24fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
  
         tokens = self.token_reader.read_tokens()
         self.assertEqual(2, len(tokens))
@@ -73,7 +73,7 @@ class USBTokenReaderTest(unittest.TestCase):
     def test_device_removed(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
+            purse.write("023.42%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
         self.token_reader.read_tokens()
 
         self.assertTrue(self.token_reader.medium_valid)
@@ -85,7 +85,7 @@ class USBTokenReaderTest(unittest.TestCase):
         t = 1375901686
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             for i in range(230):
-                purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
+                purse.write("023.42%%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
         tokens = self.token_reader.read_tokens()
         self.assertEqual(200, len(tokens))
 
@@ -94,7 +94,7 @@ class USBTokenReaderTest(unittest.TestCase):
         t = 1375901686
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             for i in range(300):
-                purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
+                purse.write("023.42%%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
         tokens = self.token_reader.read_tokens(250)
         self.assertEqual(250, len(tokens))
 
@@ -103,7 +103,7 @@ class USBTokenReaderTest(unittest.TestCase):
         t = 1375901686
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             for i in range(30000):
-                purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
+                purse.write("023.42%%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
 
 

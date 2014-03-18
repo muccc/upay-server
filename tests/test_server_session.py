@@ -53,7 +53,7 @@ class SessionTest(unittest.TestCase):
         session.create_tokens(Decimal(5))
         session.close()
  
-        hashes = [nupay.Token().hash, nupay.Token().hash]
+        hashes = [nupay.Token(value=Decimal(1)).hash_string, nupay.Token(value=Decimal(1)).hash_string]
         session = self.session_manager.create_session()
         credit = session.validate_hashes(hashes)
         self.assertEqual(credit, 0)

@@ -22,7 +22,7 @@ def read_tokens_from_file(purse_path, max_tokens = 200, max_size = 100 * 1024):
             if t not in tokens:
                 tokens.append(t)
             else:
-                logger.info("Found duplicated token: %s"%t.token)
+                logger.info("Found duplicated token: %s"%t.token_string)
 
             if len(tokens) >= max_tokens:
                 break
