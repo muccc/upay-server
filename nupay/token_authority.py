@@ -78,15 +78,24 @@ class TokenAuthority(object):
             self.validate_token(token)
             self.void_token(token)
             map(self.create_token, split_tokens)
+            return split_tokens 
+    
+    def merge_tokens(self, tokens):
+        total_value = sum([token.value for token in tokens])
+        token = Token(value = total_value)
 
-        return split_tokens 
+        with self._connection.begin() as trans:
+            map(self.validate_token, tokens)
+            map(self.void_token, tokens)
+            self.create_token(token)
+            return token
 
     def _add_token(self, token):
         ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
         self._execute(ins)
 
     def _void_token(self, token):
-        self._validate_token(token)
+        self.validate_token(token)
         statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).values(used = datetime.now())
         r = self._execute(statement)
     

@@ -4,6 +4,7 @@ import logging
 import ConfigParser
 from  decimal import Decimal
 import sys
+from functools import partial
 
 import nupay
 
@@ -60,14 +61,14 @@ class TokenAuthorityTest(unittest.TestCase):
         self._ta.validate_token(t)
         
         t = nupay.Token(value = Decimal("5"))
-        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
     
     def test_transact_token(self):
         t1 = nupay.Token(value = Decimal(2))
         self._ta.create_token(t1)
         t2 = self._ta.transact_token(t1)
 
-        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t1)
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t1)
         self._ta.validate_token(t2)
 
         self.assertEquals(t1.value, t2.value)
@@ -79,7 +80,7 @@ class TokenAuthorityTest(unittest.TestCase):
 
         tokens = self._ta.split_token(t, map(Decimal, (1,2,3,4)))
         
-        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
         self.assertEquals(len(tokens), 4)
         self.assertEquals(tokens[0].value, Decimal(1))
@@ -102,6 +103,24 @@ class TokenAuthorityTest(unittest.TestCase):
         self.assertRaises(TypeError, self._ta.split_token, t, (1,2,3,4))
         self._ta.validate_token(t)
 
+    def test_merge_tokens(self):
+        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        map(self._ta.create_token, tokens)
+
+        t = self._ta.merge_tokens(tokens)
+
+        map(partial(self.assertRaises, nupay.NoValidTokenFoundError, self._ta.validate_token), tokens)
+        self._ta.validate_token(t)
+        self.assertEquals(t.value, Decimal(10))
+
+
+    def test_merge_tokens_bad(self):
+        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        map(self._ta.create_token, tokens[1:])
+
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.merge_tokens, tokens)
+
+        map(self._ta.validate_token, tokens[1:])
 
 
 if __name__ == '__main__':
