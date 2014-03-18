@@ -5,16 +5,16 @@ import os
 import logging
 from decimal import Decimal
 
-
 class BadTokenFormatError(Exception):
     pass
-
 
 class Token(object):
     
     MIN_VALUE = Decimal("0.01")
     MAX_VALUE = Decimal("999.99")
-    TOKEN_FORMAT = re.compile(r'(\d{3}\.\d{2})\%[A-Za-z0-9]{64}\%[0-9]{10}$')
+    TOKEN_FORMAT = r'(\d{3}\.\d{2})\%[A-Za-z0-9]{64}\%[0-9]{10}$'
+    TOKEN_FORMAT_RE = re.compile(TOKEN_FORMAT)
+
     HASH_STRING_LENGTH = 128
 
     def __init__(self, token_string = None, value = None):
@@ -37,7 +37,7 @@ class Token(object):
     
     @staticmethod
     def _check_token_string_format(token_string):
-        match = Token.TOKEN_FORMAT.match(token_string)
+        match = Token.TOKEN_FORMAT_RE.match(token_string)
         if match is None:
             logger = logging.getLogger(__name__)
             logger.warning("Token %s is badly formatted" % token_string)
@@ -77,7 +77,7 @@ class Token(object):
     @property
     def value(self):
         if self._value is None: 
-            match = Token.TOKEN_FORMAT.match(self.token_string)
+            match = Token.TOKEN_FORMAT_RE.match(self.token_string)
             self._value = Decimal(match.group(1))
         return self._value
 
