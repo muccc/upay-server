@@ -63,17 +63,6 @@ class TokenAuthorityTest(unittest.TestCase):
         t = nupay.Token(value = Decimal("5"))
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
     
-    def test_transact_token(self):
-        t1 = nupay.Token(value = Decimal(2))
-        self._ta.create_token(t1)
-        t2 = self._ta.transact_token(t1)
-
-        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t1)
-        self._ta.validate_token(t2)
-
-        self.assertEquals(t1.value, t2.value)
-        self.assertNotEquals(t1, t2)
-
     def test_split_token(self):
         t = nupay.Token(value = Decimal(10))
         self._ta.create_token(t)

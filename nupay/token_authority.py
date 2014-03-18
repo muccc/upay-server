@@ -49,9 +49,6 @@ class TokenAuthority(object):
         self._metadata.drop_all(self._engine)
         self._metadata.create_all(self._engine)
 
-    def transact_token(self, token):
-        return self.split_token(token, (token.value, ))[0]
-
     def split_token(self, token, values):
         split_tokens = map(lambda value: Token(value = value), values)
 
