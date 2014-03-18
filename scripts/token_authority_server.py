@@ -68,16 +68,23 @@ def merge_tokens():
     schemas.validate_merge(request.json)
     
     tokens = map(nupay.Token, request.json['tokens'])
-    transfered_tokens = []
 
-    for token in tokens:
-        try:
-            t = token_authority.transact_token(token)
-            transfered_tokens.append(t)
-        except:
-            pass
+    merged_token = token_authority.merge_tokens(tokens)
 
-    return make_response(jsonify( { 'merged_tokens': map(str, transfered_tokens) } ))
+    return make_response(jsonify( { 'merged_token': str(merged_token) } ))
+
+
+@app.route('/v1.0/split', methods = ['POST'])
+@get_global_lock
+def split_tokens():
+    schemas.validate_split(request.json)
+
+    token = nupay.Token(request.json['token'])
+    values = map(Decimal, request.json['values'])
+
+    split_tokens = token_authority.split_token(token, values)
+
+    return make_response(jsonify( { 'split_tokens': map(str, split_tokens) } ))
 
 
 if __name__ == '__main__':

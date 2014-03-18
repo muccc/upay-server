@@ -71,7 +71,7 @@ class TokenClient(object):
     def split_token(self, token, values):
         values = ['%06.02f' % v for v in values]
 
-        r = self._session.post(self._session_uri + '/merge',
+        r = self._session.post(self._session_uri + '/split',
                 data = json.dumps({"token": str(token), "values": values}),
                 timeout = self._timeout)
 
