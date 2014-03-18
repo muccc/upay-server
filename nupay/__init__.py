@@ -4,3 +4,4 @@ from session import SessionManager, Session, SessionConnectionError, NotEnoughCr
 from server_session import ServerSessionManager, ServerSession
 from server_usermanager import ServerUserManager
 from token_authority import TokenAuthority, NoValidTokenFoundError
+from token_client import TokenClient
