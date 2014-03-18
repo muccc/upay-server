@@ -53,11 +53,13 @@ class TokenAuthority(object):
         return self.split_token(token, (token.value, ))[0]
 
     def split_token(self, token, values):
-        total_split_value = sum(values)
+        split_tokens = map(lambda value: Token(value = value), values)
+
+        total_split_value = sum([t.value for t in split_tokens])
+
         if total_split_value != token.value:
             raise ValueError("Split value does not match token value")
         
-        split_tokens = map(lambda value: Token(value = value), values)
         
         with self._connection.begin() as trans:
             self.validate_token(token)

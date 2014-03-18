@@ -102,6 +102,12 @@ class TokenAuthorityTest(unittest.TestCase):
         self._ta.create_token(t)
         self.assertRaises(TypeError, self._ta.split_token, t, (1,2,3,4))
         self._ta.validate_token(t)
+ 
+    def test_split_token_bad2(self):
+        t = nupay.Token(value = Decimal(10))
+        self._ta.create_token(t)
+
+        self.assertRaises(ValueError, self._ta.split_token, t, map(Decimal, ("3.333", "3.333", "3.334")))
 
     def test_merge_tokens(self):
         tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
