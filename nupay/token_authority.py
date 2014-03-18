@@ -85,6 +85,7 @@ class TokenAuthority(object):
             self._execute(statement)
     
     def validate_token(self, token):
+        self._logger.debug("Validating %s" % token)
         result = self._execute(select([self._tokens]).where(self._tokens.c.hash == token.hash_string).where(self._tokens.c.used == None)).fetchone()
         if result == None:
             raise NoValidTokenFoundError('Token not found')
