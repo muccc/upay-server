@@ -49,21 +49,6 @@ class TokenAuthority(object):
         self._metadata.drop_all(self._engine)
         self._metadata.create_all(self._engine)
 
-    def create_token(self, token):
-        self._add_token(token)
-
-    def void_token(self, token):
-        if type(token) != Token:
-            raise TypeError('token must be of type <Token>')
-
-        self._void_token(token)
-
-    def validate_token(self, token):
-        if type(token) != Token:
-            raise TypeError('token must be of type <Token>')
-
-        self._validate_token(token)
-    
     def transact_token(self, token):
         return self.split_token(token, (token.value, ))[0]
 
@@ -90,16 +75,17 @@ class TokenAuthority(object):
             self.create_token(token)
             return token
 
-    def _add_token(self, token):
+    def create_token(self, token):
         ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
         self._execute(ins)
 
-    def _void_token(self, token):
-        self.validate_token(token)
-        statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).values(used = datetime.now())
-        r = self._execute(statement)
+    def void_token(self, token):
+        with self._connection.begin() as trans:
+            self.validate_token(token)
+            statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).values(used = datetime.now())
+            self._execute(statement)
     
-    def _validate_token(self, token):
+    def validate_token(self, token):
         result = self._execute(select([self._tokens]).where(self._tokens.c.hash == token.hash_string).where(self._tokens.c.used == None)).fetchone()
         if result == None:
             raise NoValidTokenFoundError('Token not found')
