@@ -7,6 +7,8 @@ from functools import wraps
 import time
 from decimal import Decimal
 import nupay
+import nupay.token_authority_schemas as schemas
+
 import ConfigParser
 import sys
 import os
@@ -22,6 +24,7 @@ context.use_privatekey_file('test.key')
 context.use_certificate_file('test.crt')
 
 token_authority = nupay.TokenAuthority(config)
+token_authority.connect()
 
 import threading
 global_lock = threading.RLock()
@@ -44,11 +47,8 @@ def not_found(error):
 
 @app.route('/v1.0/validate', methods = ['POST'])
 @get_global_lock
-def validate_tokens(session_id):
-    if not request.json or not 'tokens' in request.json:
-        abort(400)
-    if not type(request.json['tokens']) == type([]):
-        abort(400)
+def validate_tokens():
+    schemas.validate_validate(request.json)
     
     tokens = map(nupay.Token, request.json['tokens'])
     valid_tokens = []
@@ -57,18 +57,15 @@ def validate_tokens(session_id):
         try:
             token_authority.validate_token(token)
             valid_tokens.append(token)
-        except:
+        except nupay.NoValidTokenFoundError:
             pass
 
     return make_response(jsonify( { 'valid_tokens': map(str, valid_tokens) } ))
 
-@app.route('/v1.0/transfer', methods = ['POST'])
+@app.route('/v1.0/merge', methods = ['POST'])
 @get_global_lock
-def transfer_tokens(session_id):
-    if not request.json or not 'tokens' in request.json:
-        abort(400)
-    if not type(request.json['tokens']) == type([]):
-        abort(400)
+def merge_tokens():
+    schemas.validate_merge(request.json)
     
     tokens = map(nupay.Token, request.json['tokens'])
     transfered_tokens = []
@@ -80,11 +77,11 @@ def transfer_tokens(session_id):
         except:
             pass
 
-    return make_response(jsonify( { 'transfered_tokens': map(str, transfered_tokens) } ))
+    return make_response(jsonify( { 'merged_tokens': map(str, transfered_tokens) } ))
 
 
 if __name__ == '__main__':
-    app.run(debug = False, ssl_context=context)
+    app.run(debug = True, ssl_context=context)
 
 
 
