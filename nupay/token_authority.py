@@ -99,8 +99,10 @@ class TokenAuthority(object):
     def void_token(self, token):
         with self._connection.begin() as trans:
             self.validate_token(token)
-            statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).values(used = datetime.now())
-            self._execute(statement)
+            statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).where(self._tokens.c.used == None).values(used = datetime.now())
+            res = self._execute(statement)
+            if res.rowcount != 1:
+                raise NoValidTokenFoundError('Token could not be voided')
     
     def validate_token(self, token):
         self._logger.debug("Validating %s" % token)
