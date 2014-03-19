@@ -1,32 +1,30 @@
 #!/usr/bin/env python
-from flask import Flask, jsonify, Response, request, abort, url_for
-from flask import make_response
-import flask
-from OpenSSL import SSL
 from functools import wraps
 import time
 from decimal import Decimal
-import nupay
-import nupay.token_authority_schemas as schemas
-
 import ConfigParser
 import sys
 import os
 import uuid
+import threading
+
+from flask import Flask, jsonify, Response, request, abort, url_for
+from flask import make_response
+import flask
+
+from OpenSSL import SSL
+
+import nupay
+import nupay.token_authority_schemas as schemas
 
 config_file_path = sys.argv[1]
 
 config = ConfigParser.RawConfigParser()
 config.read(config_file_path)
 
-context = SSL.Context(SSL.SSLv23_METHOD)
-context.use_privatekey_file('test.key')
-context.use_certificate_file('test.crt')
-
 token_authority = nupay.TokenAuthority(config)
 token_authority.connect()
 
-import threading
 global_lock = threading.RLock()
 
 def get_global_lock(f):
@@ -86,6 +84,12 @@ def split_tokens():
 
     return make_response(jsonify( { 'split_tokens': map(str, split_tokens) } ))
 
+if config.getboolean('WebService', 'use_ssl'):
+    context = SSL.Context(SSL.SSLv23_METHOD)
+    context.use_privatekey_file('test.key')
+    context.use_certificate_file('test.crt')
+else:
+    conext = None
 
 if __name__ == '__main__':
     app.run(debug = True, ssl_context=context)
