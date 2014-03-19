@@ -35,12 +35,27 @@ class TokenAuthority(object):
         )
 
     def connect(self):
+        self._logger.debug("connect()")
         self._connection = self._engine.connect()
+        self._transaction = self._connection.begin()
 
     def disconnect(self):
+        self._logger.debug("disconnect()")
+        self._transaction.close()
+        self._transaction = None
         self._connection.close()
         self._connection = None
 
+    def commit(self):
+        self._logger.debug("commit()")
+        self._transaction.commit() 
+        self._transaction = self._connection.begin()
+
+    def rollback(self):
+        self._logger.debug("rollback()")
+        self._transaction.rollback() 
+        self._transaction = self._connection.begin()
+        
     def bootstrap_db(self):
         if self.config.get('Database','allow_bootstrap') != 'True':
             self.logger.error('Bootstrapping is disabled in the configuration')
@@ -75,8 +90,9 @@ class TokenAuthority(object):
             return token
 
     def create_token(self, token):
-        ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
-        self._execute(ins)
+        with self._connection.begin() as trans:
+            ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
+            self._execute(ins)
 
     def void_token(self, token):
         with self._connection.begin() as trans:

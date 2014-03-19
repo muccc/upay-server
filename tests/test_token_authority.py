@@ -7,6 +7,7 @@ import sys
 from functools import partial
 
 import nupay
+import sqlalchemy.exc
 
 def db_config():
     config = ConfigParser.RawConfigParser()
@@ -48,11 +49,20 @@ class TokenAuthorityTest(unittest.TestCase):
     def test_create_token(self):
         t = nupay.Token(value = Decimal(2))
         self._ta.create_token(t)
+        self._ta.commit()
+
+    def test_create_token_rollback(self):
+        t = nupay.Token(value = Decimal(2))
+        self._ta.create_token(t)
+        self._ta.rollback()
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
 
     def test_void_token(self):
         t = nupay.Token(value = Decimal(2))
         self._ta.create_token(t)
+        self._ta.commit()
         self._ta.void_token(t)
+        self._ta.commit()
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
 
     def test_validate_token(self):
@@ -68,6 +78,7 @@ class TokenAuthorityTest(unittest.TestCase):
         self._ta.create_token(t)
 
         tokens = self._ta.split_token(t, map(Decimal, (1,2,3,4)))
+        self._ta.commit()
         
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
@@ -98,11 +109,24 @@ class TokenAuthorityTest(unittest.TestCase):
 
         self.assertRaises(ValueError, self._ta.split_token, t, map(Decimal, ("3.333", "3.333", "3.334")))
 
+    def test_split_token_rollback(self):
+        t = nupay.Token(value = Decimal(10))
+        self._ta.create_token(t)
+        self._ta.commit()
+
+        tokens = self._ta.split_token(t, map(Decimal, (1,2,3,4)))
+        self._ta.rollback()
+        
+        map(partial(self.assertRaises, nupay.NoValidTokenFoundError, self._ta.validate_token), tokens)
+        self._ta.validate_token(t)
+ 
+
     def test_merge_tokens(self):
         tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
         map(self._ta.create_token, tokens)
 
         t = self._ta.merge_tokens(tokens)
+        self._ta.commit()
 
         map(partial(self.assertRaises, nupay.NoValidTokenFoundError, self._ta.validate_token), tokens)
         self._ta.validate_token(t)
@@ -114,8 +138,23 @@ class TokenAuthorityTest(unittest.TestCase):
         map(self._ta.create_token, tokens[1:])
 
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.merge_tokens, tokens)
+        
+        self.assertRaises(sqlalchemy.exc.InvalidRequestError, self._ta.commit)
+        
+        # The exception also rolled back the created tokens
+        map(partial(self.assertRaises, nupay.NoValidTokenFoundError, self._ta.validate_token), tokens)
+    
 
-        map(self._ta.validate_token, tokens[1:])
+    def test_merge_tokens_rollback(self):
+        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        map(self._ta.create_token, tokens)
+        self._ta.commit()
+
+        t = self._ta.merge_tokens(tokens)
+        self._ta.rollback()
+
+        map(self._ta.validate_token, tokens)
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
 
 if __name__ == '__main__':
