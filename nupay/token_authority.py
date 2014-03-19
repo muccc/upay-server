@@ -17,8 +17,10 @@ class TokenAuthority(object):
         self._logger = logging.getLogger(__name__)
         self.config = config
         try:
-            #self._engine = sqlalchemy.create_engine(config.get('Database', 'url'), echo = True)
-            self._engine = sqlalchemy.create_engine(config.get('Database', 'url'), echo = False)
+            isolation_level = 'SERIALIZABLE'
+            self._engine = sqlalchemy.create_engine(config.get('Database', 'url'),
+                                                    echo = False,
+                                                    isolation_level = isolation_level)
             self.connect()
             self.disconnect()
         except Exception as e:
