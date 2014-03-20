@@ -66,8 +66,7 @@ class TokenAuthority(object):
         self._metadata.drop_all(self._engine)
         self._metadata.create_all(self._engine)
 
-    def split_token(self, token, values):
-        split_tokens = map(lambda value: Token(value = value), values)
+    def split_token(self, token, split_tokens):
 
         total_split_value = sum([t.value for t in split_tokens])
 

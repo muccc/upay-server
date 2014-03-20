@@ -80,7 +80,8 @@ def split_tokens():
     token = nupay.Token(request.json['token'])
     values = map(Decimal, request.json['values'])
 
-    split_tokens = token_authority.split_token(token, values)
+    split_tokens = map(lambda value: nupay.Token(value = value), values)
+    token_authority.split_token(token, split_tokens)
 
     return make_response(jsonify( { 'split_tokens': map(str, split_tokens) } ))
 

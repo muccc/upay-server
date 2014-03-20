@@ -76,10 +76,11 @@ class TokenAuthorityTest(unittest.TestCase):
     def test_split_token(self):
         t = nupay.Token(value = Decimal(10))
         self._ta.create_token(t)
-
-        tokens = self._ta.split_token(t, map(Decimal, (1,2,3,4)))
         self._ta.commit()
         
+        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
+        self._ta.split_token(t, tokens)
+
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
         self.assertEquals(len(tokens), 4)
@@ -94,27 +95,20 @@ class TokenAuthorityTest(unittest.TestCase):
         t = nupay.Token(value = Decimal(10))
         self._ta.create_token(t)
 
-        self.assertRaises(ValueError, self._ta.split_token, t, map(Decimal, (1,2,3)))
+        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3))
+        self.assertRaises(ValueError, self._ta.split_token, t, tokens)
 
+        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
         t = nupay.Token(value = Decimal(10))
-        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.split_token, t, map(Decimal, (1,2,3,4)))
-
-        self._ta.create_token(t)
-        self.assertRaises(TypeError, self._ta.split_token, t, (1,2,3,4))
-        self._ta.validate_token(t)
- 
-    def test_split_token_bad2(self):
-        t = nupay.Token(value = Decimal(10))
-        self._ta.create_token(t)
-
-        self.assertRaises(ValueError, self._ta.split_token, t, map(Decimal, ("3.333", "3.333", "3.334")))
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.split_token, t, tokens)
 
     def test_split_token_rollback(self):
         t = nupay.Token(value = Decimal(10))
         self._ta.create_token(t)
         self._ta.commit()
 
-        tokens = self._ta.split_token(t, map(Decimal, (1,2,3,4)))
+        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
+        self._ta.split_token(t, tokens)
         self._ta.rollback()
         
         map(partial(self.assertRaises, nupay.NoValidTokenFoundError, self._ta.validate_token), tokens)
