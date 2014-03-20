@@ -41,65 +41,43 @@ class TokenAuthorityTestsTest(unittest.TestCase):
         request = {"token": [t1, t2]}
         self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_validate, request)
 
-    def test_merge(self):
+    def test_transform(self):
         t1 = str(nupay.Token(value = Decimal(1)))
         t2 = str(nupay.Token(value = Decimal(1)))
 
-        request = {"tokens": [t1, t2]}
-        nupay.token_authority_schemas.validate_merge(request)
+        request = {u"input_tokens": [t1, t2], "output_tokens": [t1, t2]}
+        nupay.token_authority_schemas.validate_transform(request)
 
-        request = {"tokens": [t1]}
-        nupay.token_authority_schemas.validate_merge(request)
+        request = {"input_tokens": [t1], "output_tokens": [t1, t2]}
+        nupay.token_authority_schemas.validate_transform(request)
 
-    def test_bad_merge(self):
+        request = {"input_tokens": [t1, t2], "output_tokens": [t1]}
+        nupay.token_authority_schemas.validate_transform(request)
+
+        request = {"input_tokens": [t1], "output_tokens": [t2]}
+        nupay.token_authority_schemas.validate_transform(request)
+
+    def test_bad_transform(self):
         t1 = str(nupay.Token(value = Decimal(1)))
         t2 = str(nupay.Token(value = Decimal(1)))
 
-        request = {"tokens": [t1, t1]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_merge, request)
+        request = {"input_tokens": [t1, t1], "output_tokens": [t1, t2]}
+        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
 
-        request = {"token": [t1, t2]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_merge, request)
+        request = {"input_tokens": [t1, t2], "output_tokens": [t1, t1]}
+        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
 
-        request = {"token": [t1, t2 + '1']}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_merge, request)
+        request = {"input_token": [t1, t2], "output_tokens": [t1, t2]}
+        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
 
-        request = {"token": [t1, t2[:-1]]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_merge, request)
+        request = {"input_tokens": [t1, t2], "output_token": [t1, t2]}
+        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
 
-    def test_split(self):
-        t1 = str(nupay.Token(value = Decimal(1)))
+        request = {"input_tokens": [t1, t2], "output_tokens": [t1, t2 + '1']}
+        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
 
-        request = {"token": t1, "values": ["001.02"]}
-        nupay.token_authority_schemas.validate_split(request)
-
-        request = {"token": t1, "values": ["001.02", "003.04"]}
-        nupay.token_authority_schemas.validate_split(request)
-
-    def test_bad_split(self):
-        t1 = str(nupay.Token(value = Decimal(1)))
-        t2 = str(nupay.Token(value = Decimal(1)))
-
-        request = {"token": [t1, t2], "values": ["001.02", "003.04"]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_split, request)
-
-        request = {"token": t1, "values": [1, 2]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_split, request)
-
-        request = {"token": t1, "values": [1.01, 2.04]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_split, request)
-
-        request = {"token": t1, "values": ["x"]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_split, request)
-
-        request = {"token": t1, "values": ["1.000"]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_split, request)
-
-        request = {"token": t1, "values": ["99.99x"]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_split, request)
-
-        request = {"token": t1, "values": ["9999.99"]}
-        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_split, request)
+        request = {"input_tokens": [t1, t2], "output_tokens": [t1, t2[:-1]]}
+        self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
 
 if __name__ == '__main__':
     unittest.main()

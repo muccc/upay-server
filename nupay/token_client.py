@@ -5,25 +5,11 @@ import logging
 import ssl
 import time
 import ConfigParser
+from decimal import Decimal
 
 from token import Token
 
-class SessionConnectionError(Exception):
-    pass
-
-class NotEnoughCreditError(Exception):
-    pass
-
-class RollbackError(Exception):
-    pass
-
-class CashTimeoutError(Exception):
-    pass
-
 class ConnectionError(Exception):
-    pass
-
-class SessionError(Exception):
     pass
 
 class TokenClient(object):
@@ -46,7 +32,7 @@ class TokenClient(object):
             self._session_uri = self._config.get('API', 'URL') + '/v1.0'
         except Exception as e:
             self._logger.warning("Can not connect to the server", exc_info=True)
-            raise SessionConnectionError(e)
+            raise ConnectionError(e)
 
     def validate_tokens(self, tokens):
         r = self._session.post( self._session_uri+ '/validate',
@@ -59,24 +45,22 @@ class TokenClient(object):
         return tokens
 
     def merge_tokens(self, tokens):
-        r = self._session.post(self._session_uri + '/merge',
-                data = json.dumps({"tokens": map(str, tokens)}),
-                timeout = self._timeout)
-
-        token = None
-        if r.ok:
-            token = Token(r.json()['merged_token'])
+        value = Decimal(sum([token.value for token in tokens]))
+        token = Token(value = value)
+        self.transform_tokens(tokens, [token])
         return token
 
     def split_token(self, token, values):
-        values = ['%06.02f' % v for v in values]
+        tokens = map(lambda value: Token(value = value), values) 
+        self.transform_tokens([token], tokens)
+        return tokens
 
-        r = self._session.post(self._session_uri + '/split',
-                data = json.dumps({"token": str(token), "values": values}),
+    def transform_tokens(self, input_tokens, output_tokens):
+        r = self._session.post(self._session_uri + '/transform',
+                data = json.dumps({"input_tokens": map(str, input_tokens),
+                                    "output_tokens": map(str, output_tokens)}),
                 timeout = self._timeout)
 
-        tokens = None
-        if r.ok:
-            tokens = map(Token, r.json()['split_tokens'])
-        return tokens
+        if not r.ok:
+            raise RuntimeError("Could not process request")
 

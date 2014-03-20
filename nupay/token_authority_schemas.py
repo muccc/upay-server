@@ -24,35 +24,18 @@ _validate_schema = {
      }
 }
 
-_split_schema = {
+_transform_schema = {
      "type" : "object",
-     "required": [ "token", "values" ],
+     "required": [ "input_tokens", "output_tokens"],
      "properties" : {
-        "token" : _token_schema,
-        "values" : {
-            "type": "array",
-            "items": {
-                "type": "string",
-                "pattern": r'^\d{3}\.\d{2}$'
-            }
-        }
-     }
-}
-
-_merge_schema = {
-     "type" : "object",
-     "required": ["tokens"],
-     "properties" : {
-        "tokens" : _tokens_schema
+        "input_tokens" : _tokens_schema,
+        "output_tokens" : _tokens_schema
      }
 }
 
 def validate_validate(json):
     validate(json, _validate_schema)
 
-def validate_split(json):
-    validate(json, _split_schema)
-
-def validate_merge(json):
-    validate(json, _merge_schema)
+def validate_transform(json):
+    validate(json, _transform_schema)
 

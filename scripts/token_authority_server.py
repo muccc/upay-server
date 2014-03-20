@@ -58,32 +58,22 @@ def validate_tokens():
         except nupay.NoValidTokenFoundError:
             pass
 
+    token_authority.commit()
     return make_response(jsonify( { 'valid_tokens': map(str, valid_tokens) } ))
 
-@app.route('/v1.0/merge', methods = ['POST'])
+@app.route('/v1.0/transform', methods = ['POST'])
 @get_global_lock
-def merge_tokens():
-    schemas.validate_merge(request.json)
-    
-    tokens = map(nupay.Token, request.json['tokens'])
+def transform_tokens():
+    schemas.validate_transform(request.json)
 
-    merged_token = token_authority.merge_tokens(tokens)
+    input_tokens = map(nupay.Token, request.json['input_tokens'])
+    output_tokens = map(nupay.Token, request.json['output_tokens'])
 
-    return make_response(jsonify( { 'merged_token': str(merged_token) } ))
+    token = token_authority.merge_tokens(input_tokens)
+    token_authority.split_token(token, output_tokens)
+    token_authority.commit()
 
-
-@app.route('/v1.0/split', methods = ['POST'])
-@get_global_lock
-def split_tokens():
-    schemas.validate_split(request.json)
-
-    token = nupay.Token(request.json['token'])
-    values = map(Decimal, request.json['values'])
-
-    split_tokens = map(lambda value: nupay.Token(value = value), values)
-    token_authority.split_token(token, split_tokens)
-
-    return make_response(jsonify( { 'split_tokens': map(str, split_tokens) } ))
+    return make_response(jsonify( { 'transformed_tokens': map(str, output_tokens) } ))
 
 if config.getboolean('WebService', 'use_ssl'):
     context = SSL.Context(SSL.SSLv23_METHOD)
