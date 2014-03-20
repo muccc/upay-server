@@ -7,11 +7,9 @@ token_client = nupay.TokenClient()
 
 tokens = token_client.validate_tokens(tokens)
 
-values = [token.value for token in tokens]
+new_tokens = map(lambda token: nupay.Token(value = token.value), tokens)
 
-token = token_client.merge_tokens(tokens)
+token = token_client.transform_tokens(tokens, new_tokens)
 
-tokens = token_client.split_token(token, values)
-
-for token in tokens:
+for token in new_tokens:
     print token
