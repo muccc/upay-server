@@ -7,7 +7,7 @@ token_client = nupay.TokenClient()
 
 tokens = token_client.validate_tokens(tokens)
 
-new_tokens = map(lambda token: nupay.Token(value = token.value), tokens)
+new_tokens = token_client.create_tokens([t.value for t in tokens])
 
 token = token_client.transform_tokens(tokens, new_tokens)
 

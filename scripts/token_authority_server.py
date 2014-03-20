@@ -33,8 +33,6 @@ def get_global_lock(f):
 
 app = Flask(__name__)
 
-app.secret_key = str(uuid.uuid4())
-
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify( { 'error': 'Not found' } ), 404)
@@ -76,6 +74,14 @@ def transform_tokens():
     token_authority.commit()
 
     return make_response(jsonify( { 'transformed_tokens': map(str, output_tokens) } ))
+
+@app.route('/v1.0/create', methods = ['POST'])
+@get_global_lock
+def create_tokens():
+    schemas.validate_create(request.json)
+
+    created_tokens = map(lambda value: nupay.Token(value = Decimal(value)), request.json['values'])
+    return make_response(jsonify( { 'created_tokens': map(str, created_tokens) } ))
 
 if config.getboolean('WebService', 'use_ssl'):
     context = SSL.Context(SSL.SSLv23_METHOD)

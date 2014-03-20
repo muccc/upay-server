@@ -55,6 +55,16 @@ class TokenClient(object):
         self.transform_tokens([token], tokens)
         return tokens
 
+    def create_tokens(self, values):
+        r = self._session.post(self._session_uri + '/create',
+                data = json.dumps({"values": map(lambda value: "%06.02f" % value, values)}),
+                timeout = self._timeout)
+
+        if not r.ok:
+            raise RuntimeError("Could not process request")
+
+        return map(Token, r.json()['created_tokens'])
+
     def transform_tokens(self, input_tokens, output_tokens):
         r = self._session.post(self._session_uri + '/transform',
                 data = json.dumps({"input_tokens": map(str, input_tokens),
