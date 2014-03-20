@@ -22,6 +22,7 @@ ta.connect()
 
 tokens = [Token(value = value) for x in xrange(count)]
 map(ta.create_token, tokens)
+ta.commit()
 
 for token in tokens:
     print token
