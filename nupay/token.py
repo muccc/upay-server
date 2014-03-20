@@ -52,12 +52,11 @@ class Token(object):
         if value < Token.MIN_VALUE or value > Token.MAX_VALUE:
             raise ValueError("Value is out of bounds")
 
-        t = str(int(time.time()))
-        sha256 = hashlib.sha256()
-        sha256.update(os.urandom(256))
+        from Crypto import Random
 
+        t = str(int(time.time()))
         token_string = "%06.02f" % value
-        token_string += '%' + sha256.hexdigest()
+        token_string += '%' + Random.get_random_bytes(32).encode('hex')
         token_string += '%' + t
 
         return token_string
