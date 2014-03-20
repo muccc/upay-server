@@ -51,6 +51,14 @@ class TokenAuthorityTest(unittest.TestCase):
         self._ta.create_token(t)
         self._ta.commit()
 
+    def test_create_token_double_insert(self):
+        t = nupay.Token(value = Decimal(2))
+        self._ta.create_token(t)
+        self._ta.commit()
+        self._ta.void_token(t)
+        self._ta.commit()
+        self.assertRaises(sqlalchemy.exc.IntegrityError, self._ta.create_token, t)
+
     def test_create_token_rollback(self):
         t = nupay.Token(value = Decimal(2))
         self._ta.create_token(t)
