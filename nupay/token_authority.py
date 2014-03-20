@@ -3,6 +3,7 @@ import sqlalchemy
 from sqlalchemy import Table, Column, DateTime, String, MetaData, select
 from functools import partial
 
+import time
 from datetime import datetime
 from decimal import Decimal
 
@@ -10,6 +11,9 @@ from session import SessionConnectionError
 from token import Token
 
 class NoValidTokenFoundError(Exception):
+    pass
+
+class TimeoutError(Exception):
     pass
 
 class TokenAuthority(object):
@@ -91,21 +95,30 @@ class TokenAuthority(object):
             return token
 
     def create_token(self, token):
+        # Do not use utcnow() as time.time() gets mocked by the unit tests
+        now = datetime.utcfromtimestamp(time.time())
+        if abs((token.created - now).total_seconds()) >= 60:
+            raise TimeoutError("Token is too old")
+
         with self._connection.begin() as trans:
-            ins = self._tokens.insert().values(hash = token.hash_string, created = datetime.now())
+            ins = self._tokens.insert().values(hash = token.hash_string, created = token.created)
             self._execute(ins)
 
     def void_token(self, token):
         with self._connection.begin() as trans:
-            self.validate_token(token)
-            statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string).where(self._tokens.c.used == None).values(used = datetime.now())
+            statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string) \
+                                            .where(self._tokens.c.created == token.created) \
+                                            .where(self._tokens.c.used == None) \
+                                            .values(used = datetime.utcnow())
             res = self._execute(statement)
             if res.rowcount != 1:
                 raise NoValidTokenFoundError('Token could not be voided')
     
     def validate_token(self, token):
-        self._logger.debug("Validating %s" % token)
-        result = self._execute(select([self._tokens]).where(self._tokens.c.hash == token.hash_string).where(self._tokens.c.used == None)).fetchone()
+        result = self._execute(select([self._tokens]) \
+                            .where(self._tokens.c.hash == token.hash_string) \
+                            .where(self._tokens.c.created == token.created) \
+                            .where(self._tokens.c.used == None)).fetchone()
         if result == None:
             raise NoValidTokenFoundError('Token not found')
 

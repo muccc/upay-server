@@ -5,6 +5,8 @@ import ConfigParser
 from  decimal import Decimal
 import sys
 from functools import partial
+from mock import patch
+import time
 
 import nupay
 import sqlalchemy.exc
@@ -42,6 +44,7 @@ class TokenAuthorityTest(unittest.TestCase):
         self._ta = nupay.TokenAuthority(self.config)
         self._ta.bootstrap_db()
         self._ta.connect()
+        self._t0 = time.time()
 
     def tearDown(self):
         pass
@@ -65,6 +68,13 @@ class TokenAuthorityTest(unittest.TestCase):
         self._ta.rollback()
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
 
+    @patch('time.time')
+    def test_insert_outdated_token(self, time_mock):
+        time_mock.return_value = self._t0
+        t = nupay.Token(value = Decimal(2))
+        time_mock.return_value = self._t0 + 120
+        self.assertRaises(nupay.TimeoutError, self._ta.create_token, t)
+
     def test_void_token(self):
         t = nupay.Token(value = Decimal(2))
         self._ta.create_token(t)
@@ -80,7 +90,43 @@ class TokenAuthorityTest(unittest.TestCase):
         
         t = nupay.Token(value = Decimal("5"))
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
-    
+
+    @patch('hashlib.sha512')
+    def test_validate_token_collision(self, sha512_mock):
+        class BadSha(object):
+            def __init__(self):
+                pass
+            def update(self, data):
+                pass
+            def hexdigest(self):
+                return '0' * 64
+        sha512_mock.return_value = BadSha()
+
+        t = nupay.Token(value = Decimal(2))
+        self._ta.create_token(t)
+        self._ta.validate_token(t)
+
+        time.sleep(1)
+        t = nupay.Token(value = Decimal(2))
+        self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
+
+    @patch('hashlib.sha512')
+    def test_create_token_collision(self, sha512_mock):
+        class BadSha(object):
+            def __init__(self):
+                pass
+            def update(self, data):
+                pass
+            def hexdigest(self):
+                return '0' * 64
+        sha512_mock.return_value = BadSha()
+
+        t = nupay.Token(value = Decimal(2))
+        self._ta.create_token(t)
+
+        t = nupay.Token(value = Decimal(2))
+        self.assertRaises(sqlalchemy.exc.IntegrityError, self._ta.create_token, t)
+
     def test_split_token(self):
         t = nupay.Token(value = Decimal(10))
         self._ta.create_token(t)
@@ -157,7 +203,6 @@ class TokenAuthorityTest(unittest.TestCase):
 
         map(self._ta.validate_token, tokens)
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
-
 
 if __name__ == '__main__':
     unittest.main()
