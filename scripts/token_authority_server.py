@@ -21,10 +21,6 @@ config_file_path = sys.argv[1]
 
 config = ConfigParser.RawConfigParser()
 config.read(config_file_path)
-
-token_authority = nupay.TokenAuthority(config)
-token_authority.connect()
-
 global_lock = threading.RLock()
 
 def get_global_lock(f):
@@ -51,6 +47,9 @@ def validate_tokens():
     tokens = map(nupay.Token, request.json['tokens'])
     valid_tokens = []
 
+    token_authority = nupay.TokenAuthority(config)
+    token_authority.connect()
+
     for token in tokens:
         try:
             token_authority.validate_token(token)
@@ -68,6 +67,9 @@ def transform_tokens():
 
     input_tokens = map(nupay.Token, request.json['input_tokens'])
     output_tokens = map(nupay.Token, request.json['output_tokens'])
+
+    token_authority = nupay.TokenAuthority(config)
+    token_authority.connect()
 
     token = token_authority.merge_tokens(input_tokens)
     token_authority.split_token(token, output_tokens)
