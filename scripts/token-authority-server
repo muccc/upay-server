@@ -7,6 +7,7 @@ import sys
 import os
 import uuid
 import threading
+from jsonschema import ValidationError
 
 from flask import Flask, jsonify, Response, request, abort, url_for
 from flask import make_response
@@ -35,18 +36,26 @@ app = Flask(__name__)
 
 @app.errorhandler(404)
 def not_found(error):
-    return make_response(jsonify( { 'error': 'Not found' } ), 404)
+    return make_response(jsonify({'error': 'Not found'} ), 404)
 
 @app.route('/v1.0/validate', methods = ['POST'])
 @get_global_lock
 def validate_tokens():
-    schemas.validate_validate(request.json)
-    
+    try:
+        schemas.validate_validate(request.json)
+    except ValidationError, e:
+        return make_response(jsonify(
+            {'validation-error': str(e) } ), 400)
+
     tokens = map(nupay.Token, request.json['tokens'])
     valid_tokens = []
-
-    token_authority = nupay.TokenAuthority(config)
-    token_authority.connect()
+    try:
+        token_authority = nupay.TokenAuthority(config)
+        token_authority.connect()
+    except:
+        # Log error here ;)
+        return make_response(jsonify(
+            {'internal-error': 'No connection to the database'}), 504)
 
     for token in tokens:
         try:
@@ -61,13 +70,22 @@ def validate_tokens():
 @app.route('/v1.0/transform', methods = ['POST'])
 @get_global_lock
 def transform_tokens():
-    schemas.validate_transform(request.json)
+    try:
+        schemas.validate_transform(request.json)
+    except ValidationError, e:
+        return make_response(jsonify(
+            {'validation-error': str(e)}), 400)
 
     input_tokens = map(nupay.Token, request.json['input_tokens'])
     output_tokens = map(nupay.Token, request.json['output_tokens'])
 
-    token_authority = nupay.TokenAuthority(config)
-    token_authority.connect()
+    try:
+        token_authority = nupay.TokenAuthority(config)
+        token_authority.connect()
+    except:
+        # Log error here ;)
+        return make_response(jsonify(
+            {'internal-error': 'No connection to the database'}), 504)
 
     token = token_authority.merge_tokens(input_tokens)
     token_authority.split_token(token, output_tokens)
@@ -78,7 +96,11 @@ def transform_tokens():
 @app.route('/v1.0/create', methods = ['POST'])
 @get_global_lock
 def create_tokens():
-    schemas.validate_create(request.json)
+    try:
+        schemas.validate_create(request.json)
+    except ValidationError, e:
+        return make_response(jsonify(
+            {'validation-error': str(e)}), 400)
 
     created_tokens = map(lambda value: nupay.Token(value = Decimal(value)), request.json['values'])
     return make_response(jsonify( { 'created_tokens': map(str, created_tokens) } ))
@@ -88,10 +110,11 @@ if config.getboolean('WebService', 'use_ssl'):
     context.use_privatekey_file('test.key')
     context.use_certificate_file('test.crt')
 else:
-    conext = None
+    context = None
 
 if __name__ == '__main__':
-    app.run(debug = True, ssl_context=context)
+    #app.run(debug = True, ssl_context=context)
+    app.run(debug = False, ssl_context=context)
 
 
 

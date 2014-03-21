@@ -56,16 +56,28 @@ class TokenClient(object):
         return tokens
 
     def create_tokens(self, values):
+        if len(values) == 0:
+            return []
+
         r = self._session.post(self._session_uri + '/create',
                 data = json.dumps({"values": map(lambda value: "%06.02f" % value, values)}),
                 timeout = self._timeout)
 
         if not r.ok:
-            raise RuntimeError("Could not process request")
+            if r.status_code == 400:
+                raise RuntimeError("Server reported bad request: ", r.json())
+            if r.status_code == 504:
+                raise RuntimeError("Server reported an error: ", r.json())
 
         return map(Token, r.json()['created_tokens'])
 
     def transform_tokens(self, input_tokens, output_tokens):
+        if input_tokens == [] and output_tokens == []:
+            return []
+
+        if input_tokens == [] or output_tokens == []:
+            raise ValueError("Both lists must have at least one token in them")
+
         r = self._session.post(self._session_uri + '/transform',
                 data = json.dumps({"input_tokens": map(str, input_tokens),
                                     "output_tokens": map(str, output_tokens)}),
