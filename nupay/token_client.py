@@ -65,9 +65,9 @@ class TokenClient(object):
 
         if not r.ok:
             if r.status_code == 400:
-                raise RuntimeError("Server reported bad request: ", r.json())
+                raise SessionError("Server reported bad request: ", r.json())
             if r.status_code == 504:
-                raise RuntimeError("Server reported an error: ", r.json())
+                raise SessionError("Server reported no connection to the database: ", r.json())
 
         return map(Token, r.json()['created_tokens'])
 
@@ -98,8 +98,9 @@ class TokenClient(object):
                 raise NotEnoughCreditError(("Missing amount: %.02f Eur"%amount, amount))
             elif r.status_code == 404:
                 raise SessionError("Server reported 404: Not Found")
+            elif r.status_code == 504:
+                raise SessionError("Server reported no connection to the database: ", r.json())
             else:
                 self._logger.warning("Unknown error condition: %s %s", str(r), r.text)
                 raise RuntimeError("Unknown error condition: %s %s", str(r), r.text)
-
 
