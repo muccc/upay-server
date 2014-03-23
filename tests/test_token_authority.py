@@ -58,9 +58,11 @@ class TokenAuthorityTest(unittest.TestCase):
         t = nupay.Token(value = Decimal(2))
         self._ta.create_token(t)
         self._ta.commit()
+        self.assertRaises(sqlalchemy.exc.IntegrityError, self._ta.create_token, t)
+        self._ta.connect()
         self._ta.void_token(t)
         self._ta.commit()
-        self.assertRaises(sqlalchemy.exc.IntegrityError, self._ta.create_token, t)
+        self._ta.create_token(t)
 
     def test_create_token_rollback(self):
         t = nupay.Token(value = Decimal(2))
@@ -203,6 +205,25 @@ class TokenAuthorityTest(unittest.TestCase):
 
         map(self._ta.validate_token, tokens)
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
+
+    @patch('time.time')
+    def test_restore_tokens(self, time_mock):
+        time_mock.return_value = self._t0
+        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        map(self._ta.create_token, tokens)
+        self._ta.commit()
+
+        # Some time later we tansform our tokens
+        time_mock.return_value = self._t0 + 3600 * 24
+        token = self._ta.merge_tokens(tokens)
+        tokens2 = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        self._ta.split_token(token, tokens2)
+        self._ta.commit()
+
+        # And try to roll them back...
+        token = self._ta.merge_tokens(tokens2)
+        self._ta.split_token(token, tokens)
+        self._ta.commit()
 
 if __name__ == '__main__':
     unittest.main()
