@@ -77,12 +77,29 @@ class TokenClient(object):
 
         if input_tokens == [] or output_tokens == []:
             raise ValueError("Both lists must have at least one token in them")
-
-        r = self._session.post(self._session_uri + '/transform',
+        try:
+            r = self._session.post(self._session_uri + '/transform',
                 data = json.dumps({"input_tokens": map(str, input_tokens),
                                     "output_tokens": map(str, output_tokens)}),
                 timeout = self._timeout)
+        except (requests.exceptions.SSLError, ssl.SSLError) as e:
+            self._logger.warning("SSLError", exc_info=True)
+            if str(e.message) == "The read operation timed out":
+                raise TimeoutError("Network timed out while transforming. Timestamp: %f"%time.time())
+            elif str(e.message) == "The handshake operation timed out":
+                raise ConnectionError("Handshake failed before cashing")
+            else:
+                self._logger.warning("Unknown SSL exception while cashing: %s" % str(e.message), exc_info=True)
+                raise e
 
         if not r.ok:
-            raise RuntimeError("Could not process request")
+            if r.status_code == 402:
+                amount = r.json()['error']['amount']
+                raise NotEnoughCreditError(("Missing amount: %.02f Eur"%amount, amount))
+            elif r.status_code == 404:
+                raise SessionError("Server reported 404: Not Found")
+            else:
+                self._logger.warning("Unknown error condition: %s %s", str(r), r.text)
+                raise RuntimeError("Unknown error condition: %s %s", str(r), r.text)
+
 
