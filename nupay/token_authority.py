@@ -64,13 +64,14 @@ class TokenAuthority(object):
 
     def bootstrap_db(self):
         if self.config.get('Database','allow_bootstrap') != 'True':
-            self.logger.error('Bootstrapping is disabled in the configuration')
-            return
+            self.logger.error("Bootstrapping is disabled in the configuration")
+            raise RuntimeError("Bootstrapping is disabled in the configuration")
 
         self._metadata.drop_all(self._engine)
         self._metadata.create_all(self._engine)
 
     def split_token(self, token, split_tokens):
+        self._logger.debug("split()")
 
         total_split_value = sum([t.value for t in split_tokens])
 
@@ -85,6 +86,8 @@ class TokenAuthority(object):
             return split_tokens
 
     def merge_tokens(self, tokens):
+        self._logger.debug("merge()")
+
         total_value = sum([token.value for token in tokens])
         token = Token(value = total_value)
 
@@ -95,9 +98,12 @@ class TokenAuthority(object):
             return token
 
     def create_token(self, token):
+        self._logger.debug("create(%s)" % token)
+
         # Do not use utcnow() as time.time() gets mocked by the unit tests
         now = datetime.utcfromtimestamp(time.time())
         if abs((token.created - now).total_seconds()) >= 60:
+            self._logger.warning("Token %s is too old." % token)
             raise TimeoutError("Token is too old")
 
         with self._connection.begin() as trans:
@@ -105,6 +111,7 @@ class TokenAuthority(object):
             self._execute(ins)
 
     def void_token(self, token):
+        self._logger.debug("void(%s)" % token)
         with self._connection.begin() as trans:
             statement = self._tokens.update().where(self._tokens.c.hash == token.hash_string) \
                                             .where(self._tokens.c.created == token.created) \
@@ -112,15 +119,19 @@ class TokenAuthority(object):
                                             .values(used = datetime.utcnow())
             res = self._execute(statement)
             if res.rowcount != 1:
-                raise NoValidTokenFoundError('Token could not be voided')
+                raise NoValidTokenFoundError("Token could not be voided")
+            self._logger.debug("Token %s voided" % token)
 
     def validate_token(self, token):
+        self._logger.debug("validate(%s)" % token)
         result = self._execute(select([self._tokens]) \
                             .where(self._tokens.c.hash == token.hash_string) \
                             .where(self._tokens.c.created == token.created) \
                             .where(self._tokens.c.used == None)).fetchone()
         if result == None:
-            raise NoValidTokenFoundError('Token not found')
+            self._logger.debug("Token %s not found" % token)
+            raise NoValidTokenFoundError("Token not found")
+        self._logger.debug("Token %s is valid")
 
     def _execute(self, statement):
         return self._connection.execute(statement)
