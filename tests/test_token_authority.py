@@ -20,7 +20,7 @@ def db_config():
     return config
 
 class TokenAuthorityConnectionTest(unittest.TestCase):
-    
+
     def setUp(self):
         #logging.basicConfig(level=logging.DEBUG, stream=sys.stderr)
         logging.basicConfig(level=logging.ERROR)
@@ -87,7 +87,7 @@ class TokenAuthorityTest(unittest.TestCase):
         t = nupay.Token(value = Decimal(2))
         self._ta.create_token(t)
         self._ta.validate_token(t)
-        
+
         t = nupay.Token(value = Decimal("5"))
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
@@ -131,7 +131,7 @@ class TokenAuthorityTest(unittest.TestCase):
         t = nupay.Token(value = Decimal(10))
         self._ta.create_token(t)
         self._ta.commit()
-        
+
         tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
         self._ta.split_token(t, tokens)
 
@@ -144,7 +144,7 @@ class TokenAuthorityTest(unittest.TestCase):
         self.assertEquals(tokens[3].value, Decimal(4))
 
         map(self._ta.validate_token, tokens)
- 
+
     def test_split_token_bad(self):
         t = nupay.Token(value = Decimal(10))
         self._ta.create_token(t)
@@ -164,10 +164,10 @@ class TokenAuthorityTest(unittest.TestCase):
         tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
         self._ta.split_token(t, tokens)
         self._ta.rollback()
-        
+
         map(partial(self.assertRaises, nupay.NoValidTokenFoundError, self._ta.validate_token), tokens)
         self._ta.validate_token(t)
- 
+
 
     def test_merge_tokens(self):
         tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
@@ -186,12 +186,12 @@ class TokenAuthorityTest(unittest.TestCase):
         map(self._ta.create_token, tokens[1:])
 
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.merge_tokens, tokens)
-        
+
         self.assertRaises(sqlalchemy.exc.InvalidRequestError, self._ta.commit)
-        
+
         # The exception also rolled back the created tokens
         map(partial(self.assertRaises, nupay.NoValidTokenFoundError, self._ta.validate_token), tokens)
-    
+
 
     def test_merge_tokens_rollback(self):
         tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))

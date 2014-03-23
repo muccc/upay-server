@@ -20,7 +20,7 @@ class TokenTest(unittest.TestCase):
 
     def tearDown(self):
         pass
- 
+
     def test_validation(self):
         self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "foobar")
         token = nupay.Token("020.00%745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd%1395088098")
@@ -48,10 +48,10 @@ class TokenTest(unittest.TestCase):
 
         token2 = nupay.Token(token_string)
         self.assertEqual(token2, token1)
-        
+
         token3 = nupay.Token(value = Decimal(5))
-        
+
         self.assertNotEqual(token3, token1)
- 
+
 if __name__ == '__main__':
     unittest.main()

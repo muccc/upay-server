@@ -20,7 +20,7 @@ class TokenAuthorityTestsTest(unittest.TestCase):
 
     def tearDown(self):
         pass
- 
+
     def test_validation(self):
         t1 = str(nupay.Token(value = Decimal(1)))
         t2 = str(nupay.Token(value = Decimal(1)))

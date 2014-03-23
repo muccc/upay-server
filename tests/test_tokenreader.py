@@ -20,11 +20,11 @@ class USBTokenReaderTest(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
- 
+
     def write_no_device(self):
         with io.open(self.mounts_path, "wb") as f:
             f.write("/dev/sda2 /boot ext2 rw,relatime,errors=continue 0 0\n")
-   
+
     def write_paths(self, paths):
         with io.open(self.mounts_path, "wb") as f:
             f.write("/dev/sda2 /boot ext2 rw,relatime,errors=continue 0 0\n")
@@ -33,7 +33,7 @@ class USBTokenReaderTest(unittest.TestCase):
 
     def test_no_device(self):
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
-    
+
     def test_new_device(self):
         self.write_paths(["/mnt/foobar"])
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
@@ -44,32 +44,32 @@ class USBTokenReaderTest(unittest.TestCase):
             purse.write("123\n")
             purse.write("124\n")
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
- 
+
     def test_new_device_with_empty_purse(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             pass
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
-        
+
     def test_new_device_with_purse_dup(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             purse.write("023.42%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
             purse.write("023.42%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
- 
+
         tokens = self.token_reader.read_tokens()
         self.assertEqual(1, len(tokens))
         self.assertEqual(tokens[0].hash_string, "8c696ccc25b1d6f915b44f3f7f039c527fbc615db13e3f2e48baa05440148171ac148df112388b86c8b61482927eaba7a8b1dffe10491b067e11120b7aba82d5")
- 
+
     def test_new_device_with_purse(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             purse.write("023.42%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
             purse.write("023.42%24fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
- 
+
         tokens = self.token_reader.read_tokens()
         self.assertEqual(2, len(tokens))
-    
+
     def test_device_removed(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
