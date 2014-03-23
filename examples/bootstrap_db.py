@@ -8,6 +8,6 @@ config = ConfigParser.RawConfigParser()
 config_file = sys.argv[1]
 config.read(config_file)
 
-
-nupay.SessionManager(config).bootstrap_db()
+ta = nupay.TokenAuthority(config)
+ta.bootstrap_db()
  
