@@ -28,7 +28,7 @@ def read_tokens_from_file(purse_path, max_tokens = 200, max_size = 100 * 1024):
                 break
 
     return tokens
-       
+
 class USBTokenReader(object):
     def __init__(self, mounts_path = '/proc/mounts'):
         self.logger = logging.getLogger(__name__)
@@ -48,19 +48,19 @@ class USBTokenReader(object):
     def read_tokens(self, max_tokens = 200, max_size = 100 * 1024):
         self._read_paths = []
         read_paths = []
-        
+
         mount_points = self._read_mount_points()
         for mount_point in mount_points.values():
             try:
                 purse_path = mount_point + '/purse'
                 if not os.path.isfile(purse_path):
                     continue
-                
+
                 tokens = read_tokens_from_file(purse_path, max_tokens, max_size)
                 if len(tokens) > 0:
                     self._read_paths = [mount_point]
                     return tokens
-       
+
             except IOError as e:
                 self.logger.warning("IOError while reading a purse", exc_info=True)
             except token.BadTokenFormatError:
@@ -69,7 +69,7 @@ class USBTokenReader(object):
 
 
     @property
-    def medium_valid(self): 
+    def medium_valid(self):
         mount_points = self._read_mount_points()
         if len(self._read_paths) == 0:
             return False

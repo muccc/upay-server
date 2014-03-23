@@ -46,11 +46,11 @@ class ServerUserManager(object):
     def __init__(self, users_config):
         self._logger = logging.getLogger(__name__)
         self._users_config = users_config
-               
+
         self._users = {}
         for name in users_config.sections():
             self._users[name] = User(users_config, name)
-    
+
     @property
     def users(self):
         return self._users

@@ -18,7 +18,7 @@ class TokenClient(object):
         self._config_location = config_location
         self._read_config()
         self.create_session()
-    
+
     def _read_config(self):
         self._config = ConfigParser.RawConfigParser()
         self._config.read(self._config_location + '/client.cfg')
@@ -51,7 +51,7 @@ class TokenClient(object):
         return token
 
     def split_token(self, token, values):
-        tokens = map(lambda value: Token(value = value), values) 
+        tokens = map(lambda value: Token(value = value), values)
         self.transform_tokens([token], tokens)
         return tokens
 

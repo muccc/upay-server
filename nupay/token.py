@@ -10,7 +10,7 @@ class BadTokenFormatError(Exception):
     pass
 
 class Token(object):
-    
+
     MIN_VALUE = Decimal("0.01")
     MAX_VALUE = Decimal("999.99")
     TOKEN_FORMAT = r'(\d{3}\.\d{2})\%([A-Za-z0-9]{64})\%([0-9]{10})$'
@@ -26,7 +26,7 @@ class Token(object):
 
         if token_string is None:
             token_string = Token._create_token_string(value)
-        
+
         token_string = token_string.strip()
 
         Token._check_token_string_format(token_string)
@@ -36,7 +36,7 @@ class Token(object):
         self._created = None
 
         self.logger.debug("New token: %s" % token_string)
-    
+
     @staticmethod
     def _check_token_string_format(token_string):
         match = Token.TOKEN_FORMAT_RE.match(token_string)
@@ -50,7 +50,7 @@ class Token(object):
     def _create_token_string(value):
         if type(value) != Decimal:
             raise TypeError("Value must be a Decimal type")
-        
+
         if value < Token.MIN_VALUE or value > Token.MAX_VALUE:
             raise ValueError("Value is out of bounds")
 
@@ -77,7 +77,7 @@ class Token(object):
 
     @property
     def value(self):
-        if self._value is None: 
+        if self._value is None:
             match = Token.TOKEN_FORMAT_RE.match(self.token_string)
             self._value = Decimal(match.group(1))
         return self._value

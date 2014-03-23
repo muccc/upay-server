@@ -22,7 +22,7 @@ class ServerSessionManager(object):
         except Exception as e:
             self._logger.warning("Can not connect to the database", exc_info=True)
             raise SessionConnectionError(e)
- 
+
     def create_session(self):
         try:
             self.engine.connect()
@@ -43,13 +43,13 @@ class ServerSession(object):
     def __init__(self, db_session):
         self._logger = logging.getLogger(__name__)
         self._db_session = db_session
-        self._valid_tokens = set() 
+        self._valid_tokens = set()
         self._total = Decimal('0')
         self._token_value = Decimal('0.5')
-   
+
     def close(self):
         self._db_session.close()
-    
+
     @property
     def valid_tokens(self):
         return self._valid_tokens
@@ -81,7 +81,7 @@ class ServerSession(object):
 
         self._total += len(cashed_tokens) * self._token_value
         map(self._valid_tokens.remove, cashed_tokens)
-        
+
         if amount <= 0:
             self._db_session.commit()
             self._logger.debug('Done')
@@ -105,7 +105,7 @@ class ServerSession(object):
                 token.used = None
             else:
                 raise RollbackError('Unknown rollback error')
-        
+
         self._total -= len(cashed_tokens) * self._token_value
         map(self._valid_tokens.add, cashed_tokens)
         self._db_session.commit()
@@ -113,7 +113,7 @@ class ServerSession(object):
     def create_tokens(self, amount):
         amount = Decimal(amount)
         self._logger.info("creating tokens for %s Eur", str(amount))
-        
+
         tokens = []
         while amount >= (len(tokens) + 1) * self._token_value:
             token = Token()

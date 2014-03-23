@@ -31,7 +31,7 @@ class TokenAuthority(object):
             self._logger.warning("Can not connect to the database", exc_info=True)
             raise SessionConnectionError(e)
         self._init_metadata()
-    
+
     def _init_metadata(self):
         self._metadata = MetaData()
         self._tokens = Table('tokens', self._metadata,
@@ -54,14 +54,14 @@ class TokenAuthority(object):
 
     def commit(self):
         self._logger.debug("commit()")
-        self._transaction.commit() 
+        self._transaction.commit()
         self._transaction = self._connection.begin()
 
     def rollback(self):
         self._logger.debug("rollback()")
-        self._transaction.rollback() 
+        self._transaction.rollback()
         self._transaction = self._connection.begin()
-        
+
     def bootstrap_db(self):
         if self.config.get('Database','allow_bootstrap') != 'True':
             self.logger.error('Bootstrapping is disabled in the configuration')
@@ -76,14 +76,14 @@ class TokenAuthority(object):
 
         if total_split_value != token.value:
             raise ValueError("Split value does not match token value")
-        
-        
+
+
         with self._connection.begin() as trans:
             self.validate_token(token)
             self.void_token(token)
             map(self.create_token, split_tokens)
-            return split_tokens 
-    
+            return split_tokens
+
     def merge_tokens(self, tokens):
         total_value = sum([token.value for token in tokens])
         token = Token(value = total_value)
@@ -113,7 +113,7 @@ class TokenAuthority(object):
             res = self._execute(statement)
             if res.rowcount != 1:
                 raise NoValidTokenFoundError('Token could not be voided')
-    
+
     def validate_token(self, token):
         result = self._execute(select([self._tokens]) \
                             .where(self._tokens.c.hash == token.hash_string) \

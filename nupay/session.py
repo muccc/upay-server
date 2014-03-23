@@ -45,7 +45,7 @@ class SessionManager(object):
 
     def create_session(self):
         return Session(self._client, self._collectors, self._max_value)
- 
+
 
 class Session(object):
     def __init__(self, client, collectors, max_value):
@@ -57,7 +57,7 @@ class Session(object):
         #self._total = 0
         self._cashed_tokens = []
         self._locked_tokens = []
-   
+
     def __enter__(self):
         return self
 
@@ -99,7 +99,7 @@ class Session(object):
         #    pass
 
         return self.credit
-    
+
     def select_tokens(self, amount):
         # The problem is the subset sum problem
 
@@ -121,7 +121,7 @@ class Session(object):
                 return sorted_tokens[value][:int(needed_count)]
 
         raise NotEnoughCreditError(("Missing amount: %.02f Eur"%amount, amount))
-            
+
     def cash(self, amount):
         # First we need to figure out if some combination
         # of tokens can create the needed amount
@@ -155,7 +155,7 @@ class Session(object):
         self._cashed_tokens = tokens_to_cash
 
         self.validate_tokens()
-    
+
     def collect(self):
          if self._locked_tokens != []:
             for collector in self._collectors:
