@@ -2,6 +2,9 @@ import mosquitto
 import threading
 import Queue
 import time
+import git
+import tempfile
+import os
 
 class Collector(object):
     def __init__(self):
@@ -10,6 +13,22 @@ class Collector(object):
     def collect_tokens(self, tokens):
         print "collecting:", tokens
         pass
+
+class GITCollector(Collector):
+    def __init__(self, url):
+        self._path = tempfile.mkdtemp()
+        self._repo = git.Repo.clone_from(url, self._path)
+        print self._path
+        self._token_file_name = 'collected_tokens'
+        self._token_file = open(os.path.join(self._path, self._token_file_name), 'a')
+
+    def collect_tokens(self, tokens):
+        for token in tokens:
+            self._token_file.write(str(token) + '\n')
+        self._token_file.flush()
+        self._repo.index.add([self._token_file_name])
+        self._repo.index.commit("New tokens")
+        self._repo.remotes.origin.push()
 
 class MQTTCollector(Collector):
     def __init__(self, server, topic, client_id):
