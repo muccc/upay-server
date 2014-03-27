@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+import mosquitto
+import threading
+import Queue
+import time
+import nupay
+import functools
+
+class MQTTTokenForwarder(object):
+    def __init__(self, server, topic, client_id, collectors):
+        self._client = mosquitto.Mosquitto(client_id)
+        self._mqtt_thread = threading.Thread(target = self._run)
+        self._keep_running = True
+        self._topic = topic
+        self._server = server
+        self._topic = topic
+        self._token_queue = Queue.Queue()
+        self._collectors = collectors
+        self._connect()
+        self._mqtt_thread.start()
+    
+    def _on_message(self, mosq, obj, msg):
+        print msg.payload
+        for collector in self._collectors:
+            collector.collect_tokens([msg.payload])
+
+    def _connect(self):
+        self._connected = False
+        while self._connected == False:
+            time.sleep(1)
+            try:
+                rc = self._client.connect(self._server)
+                if rc != 0:
+                    print '_client.connect() = ', rc
+                    continue
+
+                rc = self._client.subscribe(self._topic, 2)
+                if rc[0] != 0:
+                    print '_client.subscribe() = ', rc
+                    continue
+
+                #self._client.on_message = functools.partial(self._on_message, self)
+                self._client.on_message = self._on_message
+                self._connected = True
+
+            except Exception as e:
+                print e
+
+    def stop(self):
+        self._keep_running = False
+        self._mqtt_thread.join()
+        self._client.disconnect()
+
+    def _run(self):
+        while self._keep_running:
+            rc = self._client.loop()
+            if rc != 0:
+                self._connect()
+
+    @property
+    def connected(self):
+        return self._connected
+
+    def join(self):
+        self._mqtt_thread.join()
+
+if __name__ == '__main__':
+    git_collector = nupay.GITCollector('git@github.com:schneider42/tokens.git')
+    collectors = [git_collector]
+    forwarder = MQTTTokenForwarder('localhost', '/collected/#', 'token-forwarder', collectors)
+    forwarder.join()
+    
+
