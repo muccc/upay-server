@@ -17,8 +17,27 @@ from OpenSSL import SSL
 
 import nupay
 import nupay.token_authority_schemas as schemas
+import argparse
 
-config_file_path = sys.argv[1]
+# Program name, version and date
+PROGRAM_NAME = 'UPAY Token Authority Server'
+PROGRAM_VERSION = '0.1'
+PROGRAM_DATE = '2014-03-30'
+PROGRAM_STRING = "%s %s (%s)" % (PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_DATE)
+
+# Configure arguments and set parsing options
+parser = argparse.ArgumentParser(description=PROGRAM_STRING)
+parser.add_argument('-c',
+                    type=str,
+                    dest='config_file_name',
+                    default='/etc/upay/server.conf',
+                    help='Location of the configuration file')
+
+
+# Parse the arguments as defined
+args = parser.parse_args()
+
+config_file_path = args.config_file_name
 
 config = ConfigParser.RawConfigParser()
 config.read(config_file_path)
