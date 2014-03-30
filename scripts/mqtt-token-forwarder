@@ -39,7 +39,6 @@ class MQTTTokenForwarder(object):
                     print '_client.subscribe() = ', rc
                     continue
 
-                #self._client.on_message = functools.partial(self._on_message, self)
                 self._client.on_message = self._on_message
                 self._connected = True
 
