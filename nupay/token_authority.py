@@ -89,7 +89,7 @@ class TokenAuthority(object):
         self._logger.debug("merge()")
 
         total_value = sum([token.value for token in tokens])
-        token = Token(value = total_value)
+        token = Token(total_value)
 
         with self._connection.begin() as trans:
             map(self.validate_token, tokens)

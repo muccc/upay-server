@@ -1,11 +1,6 @@
 from jsonschema import validate
 from token import Token
 
-_token_schema = {
-    "type": "string",
-    "pattern": Token.TOKEN_FORMAT
-}
-
 _value_schema = {
     "type": "string",
     "pattern": r'^\d{3}\.\d{2}$'
@@ -15,7 +10,7 @@ _tokens_schema = {
     "type" : "array",
     "name" : "tokens",
     "items": 
-        _token_schema
+        Token.TOKEN_SCHEMA
     ,
     "minItems": 1,
     "uniqueItems": True

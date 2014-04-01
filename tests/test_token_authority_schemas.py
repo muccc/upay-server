@@ -10,6 +10,7 @@ from decimal import Decimal
 import nupay
 import nupay.token_authority_schemas
 import jsonschema
+import json
 
 class TokenAuthorityTestsTest(unittest.TestCase):
 
@@ -22,8 +23,8 @@ class TokenAuthorityTestsTest(unittest.TestCase):
         pass
 
     def test_validation(self):
-        t1 = str(nupay.Token(value = Decimal(1)))
-        t2 = str(nupay.Token(value = Decimal(1)))
+        t1 = json.loads(str(nupay.Token(Decimal(1))))
+        t2 = json.loads(str(nupay.Token(Decimal(1))))
 
         request = {"tokens": [t1, t2]}
         nupay.token_authority_schemas.validate_validate(request)
@@ -32,8 +33,8 @@ class TokenAuthorityTestsTest(unittest.TestCase):
         nupay.token_authority_schemas.validate_validate(request)
 
     def test_bad_validation(self):
-        t1 = str(nupay.Token(value = Decimal(1)))
-        t2 = str(nupay.Token(value = Decimal(1)))
+        t1 = json.loads(str(nupay.Token(Decimal(1))))
+        t2 = json.loads(str(nupay.Token(Decimal(1))))
 
         request = {"tokens": [t1, t1]}
         self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_validate, request)
@@ -42,8 +43,8 @@ class TokenAuthorityTestsTest(unittest.TestCase):
         self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_validate, request)
 
     def test_transform(self):
-        t1 = str(nupay.Token(value = Decimal(1)))
-        t2 = str(nupay.Token(value = Decimal(1)))
+        t1 = json.loads(str(nupay.Token(Decimal(1))))
+        t2 = json.loads(str(nupay.Token(Decimal(1))))
 
         request = {u"input_tokens": [t1, t2], "output_tokens": [t1, t2]}
         nupay.token_authority_schemas.validate_transform(request)
@@ -58,8 +59,8 @@ class TokenAuthorityTestsTest(unittest.TestCase):
         nupay.token_authority_schemas.validate_transform(request)
 
     def test_bad_transform(self):
-        t1 = str(nupay.Token(value = Decimal(1)))
-        t2 = str(nupay.Token(value = Decimal(1)))
+        t1 = json.loads(str(nupay.Token(Decimal(1))))
+        t2 = json.loads(str(nupay.Token(Decimal(1))))
 
         request = {"input_tokens": [t1, t1], "output_tokens": [t1, t2]}
         self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
@@ -72,11 +73,13 @@ class TokenAuthorityTestsTest(unittest.TestCase):
 
         request = {"input_tokens": [t1, t2], "output_token": [t1, t2]}
         self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
-
-        request = {"input_tokens": [t1, t2], "output_tokens": [t1, t2 + '1']}
+        
+        t2['token'] += '1'
+        request = {"input_tokens": [t1, t2], "output_tokens": [t1, t2]}
         self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
-
-        request = {"input_tokens": [t1, t2], "output_tokens": [t1, t2[:-1]]}
+        
+        t2['token'] = t2['token'][:-2]
+        request = {"input_tokens": [t1, t2], "output_tokens": [t1, t2]}
         self.assertRaises(jsonschema.ValidationError, nupay.token_authority_schemas.validate_transform, request)
 
 if __name__ == '__main__':

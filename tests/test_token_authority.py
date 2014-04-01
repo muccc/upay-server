@@ -50,12 +50,12 @@ class TokenAuthorityTest(unittest.TestCase):
         pass
 
     def test_create_token(self):
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self._ta.create_token(t)
         self._ta.commit()
 
     def test_create_token_double_insert(self):
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self._ta.create_token(t)
         self._ta.commit()
         self.assertRaises(sqlalchemy.exc.IntegrityError, self._ta.create_token, t)
@@ -65,7 +65,7 @@ class TokenAuthorityTest(unittest.TestCase):
         self._ta.create_token(t)
 
     def test_create_token_rollback(self):
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self._ta.create_token(t)
         self._ta.rollback()
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
@@ -73,12 +73,12 @@ class TokenAuthorityTest(unittest.TestCase):
     @patch('time.time')
     def test_insert_outdated_token(self, time_mock):
         time_mock.return_value = self._t0
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         time_mock.return_value = self._t0 + 120
         self.assertRaises(nupay.TimeoutError, self._ta.create_token, t)
 
     def test_void_token(self):
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self._ta.create_token(t)
         self._ta.commit()
         self._ta.void_token(t)
@@ -86,11 +86,11 @@ class TokenAuthorityTest(unittest.TestCase):
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.void_token, t)
 
     def test_validate_token(self):
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self._ta.create_token(t)
         self._ta.validate_token(t)
 
-        t = nupay.Token(value = Decimal("5"))
+        t = nupay.Token(Decimal("5"))
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
     @patch('hashlib.sha512')
@@ -104,12 +104,12 @@ class TokenAuthorityTest(unittest.TestCase):
                 return '0' * 64
         sha512_mock.return_value = BadSha()
 
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self._ta.create_token(t)
         self._ta.validate_token(t)
 
         time.sleep(1)
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
     @patch('hashlib.sha512')
@@ -123,18 +123,18 @@ class TokenAuthorityTest(unittest.TestCase):
                 return '0' * 64
         sha512_mock.return_value = BadSha()
 
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self._ta.create_token(t)
 
-        t = nupay.Token(value = Decimal(2))
+        t = nupay.Token(Decimal(2))
         self.assertRaises(sqlalchemy.exc.IntegrityError, self._ta.create_token, t)
 
     def test_split_token(self):
-        t = nupay.Token(value = Decimal(10))
+        t = nupay.Token(Decimal(10))
         self._ta.create_token(t)
         self._ta.commit()
 
-        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
+        tokens = map(nupay.Token, map(Decimal, (1, 2, 3, 4)))
         self._ta.split_token(t, tokens)
 
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
@@ -148,22 +148,22 @@ class TokenAuthorityTest(unittest.TestCase):
         map(self._ta.validate_token, tokens)
 
     def test_split_token_bad(self):
-        t = nupay.Token(value = Decimal(10))
+        t = nupay.Token(Decimal(10))
         self._ta.create_token(t)
 
-        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3))
+        tokens = map(nupay.Token, map(Decimal, (1, 2, 3)))
         self.assertRaises(ValueError, self._ta.split_token, t, tokens)
 
-        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
-        t = nupay.Token(value = Decimal(10))
+        tokens = map(nupay.Token, map(Decimal, (1, 2, 3, 4)))
+        t = nupay.Token(Decimal(10))
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.split_token, t, tokens)
 
     def test_split_token_rollback(self):
-        t = nupay.Token(value = Decimal(10))
+        t = nupay.Token(Decimal(10))
         self._ta.create_token(t)
         self._ta.commit()
 
-        tokens = map(lambda value: nupay.Token(value = Decimal(value)), (1, 2, 3, 4))
+        tokens = map(nupay.Token, map(Decimal, (1, 2, 3, 4)))
         self._ta.split_token(t, tokens)
         self._ta.rollback()
 
@@ -172,7 +172,7 @@ class TokenAuthorityTest(unittest.TestCase):
 
 
     def test_merge_tokens(self):
-        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        tokens = map(nupay.Token, map(Decimal, (1,2,3,4)))
         map(self._ta.create_token, tokens)
 
         t = self._ta.merge_tokens(tokens)
@@ -184,7 +184,7 @@ class TokenAuthorityTest(unittest.TestCase):
 
 
     def test_merge_tokens_bad(self):
-        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        tokens = map(nupay.Token, map(Decimal, (1,2,3,4)))
         map(self._ta.create_token, tokens[1:])
 
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.merge_tokens, tokens)
@@ -196,7 +196,7 @@ class TokenAuthorityTest(unittest.TestCase):
 
 
     def test_merge_tokens_rollback(self):
-        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        tokens = map(nupay.Token, map(Decimal, (1,2,3,4)))
         map(self._ta.create_token, tokens)
         self._ta.commit()
 
@@ -209,14 +209,14 @@ class TokenAuthorityTest(unittest.TestCase):
     @patch('time.time')
     def test_restore_tokens(self, time_mock):
         time_mock.return_value = self._t0
-        tokens = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        tokens = map(nupay.Token, map(Decimal, (1,2,3,4)))
         map(self._ta.create_token, tokens)
         self._ta.commit()
 
         # Some time later we tansform our tokens
         time_mock.return_value = self._t0 + 3600 * 24
         token = self._ta.merge_tokens(tokens)
-        tokens2 = map(lambda value: nupay.Token(value = value), map(Decimal, (1,2,3,4)))
+        tokens2 = map(nupay.Token, map(Decimal, (1,2,3,4)))
         self._ta.split_token(token, tokens2)
         self._ta.commit()
 

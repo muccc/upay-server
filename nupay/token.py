@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import re
 import hashlib
 import time
@@ -5,6 +6,9 @@ import os
 import logging
 from decimal import Decimal
 import datetime
+import jsonschema
+import json
+import iso8601
 
 class BadTokenFormatError(Exception):
     pass
@@ -17,57 +21,72 @@ class Token(object):
     TOKEN_FORMAT_RE = re.compile(TOKEN_FORMAT)
 
     HASH_STRING_LENGTH = 128
+    VALUE_SCHEMA = {
+        'type': 'string',
+        'pattern': r'^\d{3}\.\d{2}$'
+    }
 
-    def __init__(self, token_string = None, value = None):
+    TOKEN_SCHEMA = {
+        'type': 'object',
+        'required': ['value', 'token', 'created'],
+        'properties': {
+            'token': {
+                'type': 'string',
+                'pattern': r'^[A-Fa-f0-9]{64}$'
+                #'pattern': r'[A-Fa-f0-9]{10}'
+            },
+            'created': {
+                'type': 'string'
+            },
+            'value': VALUE_SCHEMA
+        }
+    }
+
+    def __init__(self, initial_value):
         self.logger = logging.getLogger(__name__)
 
-        if (value is None and token_string is None) or (value is not None and token_string is not None):
-            raise ValueError("Either token_string or value must be defined")
+        if type(initial_value) is Decimal:
+            self._create_from_value(initial_value)
+        else:
+            try:
+                token = json.loads(initial_value)
+                #print token
+            except ValueError as e:
+                raise BadTokenFormatError(e)
 
-        if token_string is None:
-            token_string = Token._create_token_string(value)
+            try:
+                jsonschema.validate(token, self.TOKEN_SCHEMA)
+            except jsonschema.ValidationError as e:
+                raise BadTokenFormatError(e)
 
-        token_string = token_string.strip()
+            self._token_string = token['token']
+            try:
+                self._created = iso8601.parse_date(token['created'])
+            except iso8601.ParseError as e:
+                raise BadTokenFormatError(e)
 
-        Token._check_token_string_format(token_string)
-        self._token_string = token_string
+            self._value = Decimal(token['value'])
+
         self._hash_string = None
-        self._value = None
-        self._created = None
+        self.logger.debug("New token: %s" % self)
 
-        self.logger.debug("New token: %s" % token_string)
-
-    @staticmethod
-    def _check_token_string_format(token_string):
-        match = Token.TOKEN_FORMAT_RE.match(token_string)
-        if match is None:
-            logger = logging.getLogger(__name__)
-            logger.warning("Token %s is badly formatted" % token_string)
-            raise BadTokenFormatError()
-        return Decimal(match.group(1))
-
-    @staticmethod
-    def _create_token_string(value):
-        if type(value) != Decimal:
-            raise TypeError("Value must be a Decimal type")
-
+    def _create_from_value(self, value):
         if value < Token.MIN_VALUE or value > Token.MAX_VALUE:
             raise ValueError("Value is out of bounds")
 
         from Crypto import Random
-
-        t = str(int(time.time()))
-        token_string = "%06.02f" % value
-        token_string += '%' + Random.get_random_bytes(32).encode('hex')
-        token_string += '%' + t
-
-        return token_string
+        self._token_string = Random.get_random_bytes(32).encode('hex')
+        
+        # Use time.time() as it gets mocked in the unit tests
+        self._created = datetime.datetime.utcfromtimestamp(time.time())
+        self._value = value
 
     @property
     def hash_string(self):
         if self._hash_string is None:
             sha512 = hashlib.sha512()
-            sha512.update(self._token_string)
+            self.logger.debug("String to hash: " + '%'.join((self._token_string, self.created.isoformat())))
+            sha512.update('%'.join((self._token_string, self.created.isoformat())))
             self._hash_string = sha512.hexdigest()
         return self._hash_string
 
@@ -76,25 +95,24 @@ class Token(object):
         return self._token_string;
 
     @property
+    def json_string(self):
+        value = "%06.02f" % self._value
+        return json.dumps({'value': value, 'token': self.token_string, 'created': self.created.isoformat()})
+
+    @property
     def value(self):
-        if self._value is None:
-            match = Token.TOKEN_FORMAT_RE.match(self.token_string)
-            self._value = Decimal(match.group(1))
         return self._value
 
     @property
     def created(self):
-        if self._created is None:
-            match = Token.TOKEN_FORMAT_RE.match(self.token_string)
-            self._created = datetime.datetime.utcfromtimestamp(int(match.group(3)))
         return self._created
 
     def __eq__(self, other):
         return other._token_string == self._token_string
 
     def __str__(self):
-        return self._token_string
+        return self.json_string
 
     def __repr__(self):
-        return self._token_string
+        return self.json_string
 
