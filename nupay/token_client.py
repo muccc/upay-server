@@ -36,7 +36,7 @@ class TokenClient(object):
 
     def validate_tokens(self, tokens):
         r = self._session.post( self._session_uri+ '/validate',
-                data = json.dumps({"tokens": map(str, tokens)}),
+                data = json.dumps({"tokens": [dict(t) for t in tokens]}),
                 timeout = self._timeout)
 
         tokens = []
