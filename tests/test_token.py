@@ -120,7 +120,7 @@ class TokenTest(unittest.TestCase):
                             "created": "2014-12-12 12:12:12"}')
 
         sha512 = hashlib.sha512()
-        sha512.update('%'.join(("745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd", "2014-12-12T12:12:12")))
+        sha512.update('%'.join(("002.00", "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd", "2014-12-12T12:12:12")))
         hash_string = sha512.hexdigest()
         self.assertEqual(token.hash_string, hash_string)
 

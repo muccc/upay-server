@@ -72,6 +72,8 @@ class Token(UserDict.DictMixin):
             self._value = Decimal(token['value'])
 
         self._hash_string = None
+        self._hash = None
+
         self.logger.debug("New token: %s" % self)
 
     def _create_from_value(self, value):
@@ -90,8 +92,8 @@ class Token(UserDict.DictMixin):
     def hash_string(self):
         if self._hash_string is None:
             sha512 = hashlib.sha512()
-            self.logger.debug("String to hash: " + '%'.join((self._token_string, self.created.isoformat())))
-            sha512.update('%'.join((self._token_string, self.created.isoformat())))
+            self.logger.debug("String to hash: " + '%'.join((self['value'], self['token'], self['created'])))
+            sha512.update('%'.join((self['value'], self['token'], self['created'])))
             self._hash_string = sha512.hexdigest()
         return self._hash_string
 
@@ -113,7 +115,12 @@ class Token(UserDict.DictMixin):
         return self._created
 
     def __eq__(self, other):
-        return other._token_string == self._token_string
+        return other.hash_string == self.hash_string
+
+    def __hash__(self):
+        if self._hash == None:
+            self._hash = int(self.hash_string, 16)
+        return self._hash
 
     def __str__(self):
         return self.json_string
