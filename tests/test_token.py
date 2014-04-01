@@ -11,6 +11,7 @@ from mock import patch
 import time
 import datetime
 import iso8601
+import hashlib
 
 class TokenTest(unittest.TestCase):
 
@@ -29,8 +30,8 @@ class TokenTest(unittest.TestCase):
                             "token": "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd", \
                             "created": "2014-12-12 12:12:12"}')
 
-        self.assertEquals(token.created, iso8601.parse_date("2014-12-12 12:12:12"))
-        self.assertEquals(token['created'], "2014-12-12T12:12:12+00:00")
+        self.assertEquals(token.created, iso8601.parse_date("2014-12-12 12:12:12", default_timezone=None))
+        self.assertEquals(token['created'], "2014-12-12T12:12:12")
 
         self.assertEquals(token['value'], "002.00")
         self.assertEquals(token.value, Decimal("2"))
@@ -45,6 +46,28 @@ class TokenTest(unittest.TestCase):
         self.assertIn('created', keys)
         self.assertIn('token', keys)
         self.assertIn('value', keys)
+
+        token = nupay.Token({"value": "002.00", \
+                            "token": "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd", \
+                            "created": "2014-12-12 12:12:12"})
+
+        self.assertEquals(token.created, iso8601.parse_date("2014-12-12 12:12:12", default_timezone=None))
+        self.assertEquals(token['created'], "2014-12-12T12:12:12")
+
+        self.assertEquals(token['value'], "002.00")
+        self.assertEquals(token.value, Decimal("2"))
+
+        self.assertEquals(token['token'], "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd")
+        self.assertEquals(token.token_string, "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd")
+
+        keys = []
+        for key in token:
+            keys.append(key)
+
+        self.assertIn('created', keys)
+        self.assertIn('token', keys)
+        self.assertIn('value', keys)
+
 
         self.assertRaises(nupay.BadTokenFormatError, nupay.Token,
                           '{"value": "002.00", \
@@ -96,7 +119,10 @@ class TokenTest(unittest.TestCase):
                             "token": "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd", \
                             "created": "2014-12-12 12:12:12"}')
 
-        self.assertEqual(token.hash_string, '9cca6757159543f8a6e7a36d5b6ed0cc7eb35320e248834ad70c2e3a3df0f92b0342013b9510a56521ffa980efb426b85c86e70826a5bdd1668cee733ffffa49')
+        sha512 = hashlib.sha512()
+        sha512.update('%'.join(("745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd", "2014-12-12T12:12:12")))
+        hash_string = sha512.hexdigest()
+        self.assertEqual(token.hash_string, hash_string)
 
         token = nupay.Token(Decimal(20))
         self.assertNotEqual(token.hash_string, "b15772d0ed237646b769a568245bd7e791f549d38880f58b515be6d8e5eed73c6ff75c97744adc03def5c915f12d9374c28a33f8143a4a916db48149e0d72931")

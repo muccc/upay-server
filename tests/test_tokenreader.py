@@ -61,7 +61,7 @@ class USBTokenReaderTest(unittest.TestCase):
         self.assertEqual(1, len(tokens))
         
         sha512 = hashlib.sha512()
-        sha512.update('%'.join(("657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "2014-03-30T22:33:37+00:00")))
+        sha512.update('%'.join(("657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "2014-03-30T22:33:37")))
         hash_string = sha512.hexdigest()
         self.assertEqual(tokens[0].hash_string, hash_string)
 

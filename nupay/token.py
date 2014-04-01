@@ -65,7 +65,7 @@ class Token(UserDict.DictMixin):
 
             self._token_string = token['token']
             try:
-                self._created = iso8601.parse_date(token['created'])
+                self._created = iso8601.parse_date(token['created'], default_timezone=None)
             except iso8601.ParseError as e:
                 raise BadTokenFormatError(e)
 
@@ -83,6 +83,7 @@ class Token(UserDict.DictMixin):
         
         # Use time.time() as it gets mocked in the unit tests
         self._created = datetime.datetime.utcfromtimestamp(time.time())
+        #self._created = iso8601.parse_date(self._created.isoformat())
         self._value = value
 
     @property
