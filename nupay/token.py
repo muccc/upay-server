@@ -54,6 +54,9 @@ class Token(UserDict.DictMixin):
                 #print token
             except ValueError as e:
                 raise BadTokenFormatError(e)
+            except TypeError:
+                # Lets assume it is a already a dict
+                token = initial_value
 
             try:
                 jsonschema.validate(token, self.TOKEN_SCHEMA)
