@@ -9,11 +9,12 @@ import datetime
 import jsonschema
 import json
 import iso8601
+import UserDict
 
 class BadTokenFormatError(Exception):
     pass
 
-class Token(object):
+class Token(UserDict.DictMixin):
 
     MIN_VALUE = Decimal("0.01")
     MAX_VALUE = Decimal("999.99")
@@ -116,3 +117,15 @@ class Token(object):
     def __repr__(self):
         return self.json_string
 
+    def __getitem__(self, item):
+        if item == 'created':
+            return self.created.isoformat()
+        if item == 'token':
+            return self._token_string
+        if item == 'value':
+            return "%06.02f" % self._value
+
+        return None
+
+    def keys(self):
+        return ('created', 'token', 'value')

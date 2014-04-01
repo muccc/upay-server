@@ -28,7 +28,23 @@ class TokenTest(unittest.TestCase):
         token = nupay.Token('{"value": "002.00", \
                             "token": "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd", \
                             "created": "2014-12-12 12:12:12"}')
+
         self.assertEquals(token.created, iso8601.parse_date("2014-12-12 12:12:12"))
+        self.assertEquals(token['created'], "2014-12-12T12:12:12+00:00")
+
+        self.assertEquals(token['value'], "002.00")
+        self.assertEquals(token.value, Decimal("2"))
+
+        self.assertEquals(token['token'], "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd")
+        self.assertEquals(token.token_string, "745bfde3fde06aa76be565c84a8402c94b42ddcbd86897077072910f2a3054cd")
+
+        keys = []
+        for key in token:
+            keys.append(key)
+
+        self.assertIn('created', keys)
+        self.assertIn('token', keys)
+        self.assertIn('value', keys)
 
         self.assertRaises(nupay.BadTokenFormatError, nupay.Token,
                           '{"value": "002.00", \
