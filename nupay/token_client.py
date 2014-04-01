@@ -79,8 +79,8 @@ class TokenClient(object):
             raise ValueError("Both lists must have at least one token in them")
         try:
             r = self._session.post(self._session_uri + '/transform',
-                data = json.dumps({"input_tokens": map(str, input_tokens),
-                                    "output_tokens": map(str, output_tokens)}),
+                data = json.dumps({"input_tokens": [dict(t) for t in input_tokens],
+                                    "output_tokens": [dict(t) for t in output_tokens]}),
                 timeout = self._timeout)
         except (requests.exceptions.SSLError, ssl.SSLError) as e:
             self._logger.warning("SSLError", exc_info=True)
