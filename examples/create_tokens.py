@@ -20,7 +20,7 @@ count = int(sys.argv[3])
 ta = nupay.TokenAuthority(config)
 ta.connect()
 
-tokens = [Token(value = value) for x in xrange(count)]
+tokens = [Token(value) for x in xrange(count)]
 map(ta.create_token, tokens)
 ta.commit()
 

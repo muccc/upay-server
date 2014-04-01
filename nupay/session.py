@@ -127,7 +127,7 @@ class Session(object):
         # of tokens can create the needed amount
         tokens_to_cash = self.select_tokens(amount)
         assert(sum([t.value for t in tokens_to_cash]) == amount)
-        new_tokens = [Token(value = amount)]
+        new_tokens = [Token(amount)]
 
         self.collect()
 

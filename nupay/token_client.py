@@ -46,12 +46,12 @@ class TokenClient(object):
 
     def merge_tokens(self, tokens):
         value = Decimal(sum([token.value for token in tokens]))
-        token = Token(value = value)
+        token = Token(value)
         self.transform_tokens(tokens, [token])
         return token
 
     def split_token(self, token, values):
-        tokens = map(lambda value: Token(value = value), values)
+        tokens = map(Token, values)
         self.transform_tokens([token], tokens)
         return tokens
 

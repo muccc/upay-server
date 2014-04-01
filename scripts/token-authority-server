@@ -121,7 +121,7 @@ def create_tokens():
         return make_response(jsonify(
             {'validation-error': str(e)}), 400)
 
-    created_tokens = map(lambda value: nupay.Token(value = Decimal(value)), request.json['values'])
+    created_tokens = map(lambda value: nupay.Token(Decimal(value)), request.json['values'])
     return make_response(jsonify( { 'created_tokens': map(str, created_tokens) } ))
 
 if config.getboolean('WebService', 'use_ssl'):
