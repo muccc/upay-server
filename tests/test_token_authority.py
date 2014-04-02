@@ -93,6 +93,14 @@ class TokenAuthorityTest(unittest.TestCase):
         t = nupay.Token(Decimal("5"))
         self.assertRaises(nupay.NoValidTokenFoundError, self._ta.validate_token, t)
 
+    def test_validate_partial_token(self):
+        t = nupay.Token(Decimal(2))
+        self._ta.create_token(t)
+
+        t2 = nupay.Token({'value': t['value'], 'hash': t['hash'], 'created': t['created']})
+        self._ta.validate_token(t2)
+
+
     @patch('hashlib.sha512')
     def test_validate_token_collision(self, sha512_mock):
         class BadSha(object):
