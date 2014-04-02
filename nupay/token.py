@@ -73,6 +73,9 @@ class Token(UserDict.DictMixin):
 
             self._value = Decimal(token['value'])
 
+            if 'token' in token and 'hash' in token:
+                raise BadTokenFormatError("A token must either specify a hash or a token")
+
             if 'token' in token:
                 self._token_string = token['token']
             elif 'hash' in token:
@@ -86,7 +89,7 @@ class Token(UserDict.DictMixin):
 
         from Crypto import Random
         self._token_string = Random.get_random_bytes(32).encode('hex')
-        
+
         # Use time.time() as it gets mocked in the unit tests
         self._created = datetime.datetime.utcfromtimestamp(time.time())
         #self._created = iso8601.parse_date(self._created.isoformat())
