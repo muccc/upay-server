@@ -24,6 +24,13 @@ class TokenTest(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_partial(self):
+        token1 = nupay.Token({'value': '002.00', 'hash': '00'*64, 'created': '2012-12-12 12:12:12'})
+        token2 = nupay.Token('{"value": "002.00", "hash": "' + '00'*64 + '", "created": "2012-12-12 12:12:12"}')
+
+        self.assertEqual(token1, token2)
+        self.assertEqual(token1['hash'], '00' * 64)
+
     def test_validation(self):
         self.assertRaises(nupay.BadTokenFormatError, nupay.Token, "foobar")
         token = nupay.Token('{"value": "002.00", \

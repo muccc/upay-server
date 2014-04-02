@@ -29,12 +29,15 @@ class Token(UserDict.DictMixin):
 
     TOKEN_SCHEMA = {
         'type': 'object',
-        'required': ['value', 'token', 'created'],
+        'required': ['value', 'created'],
         'properties': {
             'token': {
                 'type': 'string',
                 'pattern': r'^[A-Fa-f0-9]{64}$'
-                #'pattern': r'[A-Fa-f0-9]{10}'
+            },
+            'hash': {
+                'type': 'string',
+                'pattern': r'^[A-Fa-f0-9]{128}$'
             },
             'created': {
                 'type': 'string'
@@ -63,7 +66,6 @@ class Token(UserDict.DictMixin):
             except jsonschema.ValidationError as e:
                 raise BadTokenFormatError(e)
 
-            self._token_string = token['token']
             try:
                 self._created = iso8601.parse_date(token['created'], default_timezone=None)
             except iso8601.ParseError as e:
@@ -71,8 +73,10 @@ class Token(UserDict.DictMixin):
 
             self._value = Decimal(token['value'])
 
-        self._hash_string = None
-        self._hash = None
+            if 'token' in token:
+                self._token_string = token['token']
+            elif 'hash' in token:
+                self._hash_string = token['hash']
 
         self.logger.debug("New token: %s" % self)
 
@@ -90,7 +94,9 @@ class Token(UserDict.DictMixin):
 
     @property
     def hash_string(self):
-        if self._hash_string is None:
+        try:
+            return self._hash_string
+        except AttributeError:
             sha512 = hashlib.sha512()
             self.logger.debug("String to hash: " + '%'.join((self['value'], self['token'], self['created'])))
             sha512.update('%'.join((self['value'], self['token'], self['created'])))
@@ -104,7 +110,9 @@ class Token(UserDict.DictMixin):
     @property
     def json_string(self):
         value = "%06.02f" % self._value
-        return json.dumps({'value': value, 'token': self.token_string, 'created': self.created.isoformat()})
+        return json.dumps(dict(self))
+        #{'value': value, 'token': self.token_string, 'created': self.created.isoformat()})
+        #return json.dumps({'value': value, 'token': self.token_string, 'created': self.created.isoformat()})
 
     @property
     def value(self):
@@ -118,7 +126,9 @@ class Token(UserDict.DictMixin):
         return other.hash_string == self.hash_string
 
     def __hash__(self):
-        if self._hash == None:
+        try:
+            return self._hash
+        except AttributeError:
             self._hash = int(self.hash_string, 16)
         return self._hash
 
@@ -133,10 +143,16 @@ class Token(UserDict.DictMixin):
             return self.created.isoformat()
         if item == 'token':
             return self._token_string
+        if item == 'hash':
+            return self._hash_string
         if item == 'value':
             return "%06.02f" % self._value
 
         return None
 
     def keys(self):
-        return ('created', 'token', 'value')
+        if hasattr(self, '_token_string'):
+            return ('created', 'token', 'value')
+        if hasattr(self, '_hash_string'):
+            return ('created', 'hash', 'value')
+
