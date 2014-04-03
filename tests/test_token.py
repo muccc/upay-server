@@ -12,6 +12,8 @@ import time
 import datetime
 import iso8601
 import hashlib
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.PublicKey import RSA
 
 class TokenTest(unittest.TestCase):
 
@@ -19,10 +21,36 @@ class TokenTest(unittest.TestCase):
         #logging.basicConfig(level=logging.DEBUG)
         logging.basicConfig(level=logging.ERROR)
         #self._t0 = int(time.time())
+        self._key = RSA.generate(2048)
+        self._encrypt = PKCS1_OAEP.new(self._key.publickey())
+        self._decrypt = PKCS1_OAEP.new(self._key)
         self._t0 = time.time()
 
     def tearDown(self):
         pass
+
+    def test_encrypted(self):
+        token1 = nupay.Token({'value': '000.20',
+                              'encrytped_token': 'jslkdjflkfj',
+                              'hash': '00'*64,
+                              'created': '2012-12-12 12:12:12'})
+
+        token2 = nupay.Token('{"value": "002.00", "hash": "' + '00'*64 + '", "created": "2012-12-12 12:12:12"}')
+        token3 = nupay.Token('{"value": "002.00", "token": "' + '00'*32 + '", "created": "2012-12-12 12:12:12"}')
+
+        self.assertRaises(nupay.BadTokenFormatError, nupay.Token,{'value': '000.20',
+                              'encrytped_token': 'jslkdjflkfj',
+                              'created': '2012-12-12 12:12:12'})
+
+        encrypted = token3.encrypted(self._encrypt)
+
+        self.assertRaises(nupay.BadTokenFormatError, token2.encrypted, self._encrypt)
+
+        decrypted = nupay.Token(dict(encrypted), self._decrypt)
+
+        self.assertEquals(token3, decrypted)
+
+        print encrypted.json_string
 
     def test_partial(self):
         token1 = nupay.Token({'value': '002.00', 'hash': '00'*64, 'created': '2012-12-12 12:12:12'})

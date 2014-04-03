@@ -10,6 +10,7 @@ import jsonschema
 import json
 import iso8601
 import UserDict
+import base64
 
 class BadTokenFormatError(Exception):
     pass
@@ -46,7 +47,7 @@ class Token(UserDict.DictMixin):
         }
     }
 
-    def __init__(self, initial_value):
+    def __init__(self, initial_value, cipher = None):
         self.logger = logging.getLogger(__name__)
 
         if type(initial_value) is Decimal:
@@ -73,13 +74,25 @@ class Token(UserDict.DictMixin):
 
             self._value = Decimal(token['value'])
 
-            if 'token' in token and 'hash' in token:
+            if ('token' in token) == ('hash' in token):
                 raise BadTokenFormatError("A token must either specify a hash or a token")
 
+            if 'encrypted_token' in token and 'hash' not in token:
+                raise BadTokenFormatError("An encrypted token must also specify its hash")
+
+            if 'encrypted_token' in token and 'token' in token:
+                raise BadTokenFormatError("An encrypted token must not specify a token")
+
             if 'token' in token:
-                self._token_string = token['token']
+                self._token_string = str(token['token'])
             elif 'hash' in token:
-                self._hash_string = token['hash']
+                self._hash_string = str(token['hash'])
+                if 'encrypted_token' in token:
+                    self._encrypted_token = str(token['encrypted_token'])
+
+        if cipher is not None and self._encrypted_token is not None:
+            self._token_string = cipher.decrypt(base64.decodestring(self._encrypted_token))
+            self._encrypted_token = None
 
         self.logger.debug("New token: %s" % self)
 
@@ -112,10 +125,7 @@ class Token(UserDict.DictMixin):
 
     @property
     def json_string(self):
-        value = "%06.02f" % self._value
         return json.dumps(dict(self))
-        #{'value': value, 'token': self.token_string, 'created': self.created.isoformat()})
-        #return json.dumps({'value': value, 'token': self.token_string, 'created': self.created.isoformat()})
 
     @property
     def value(self):
@@ -147,15 +157,29 @@ class Token(UserDict.DictMixin):
         if item == 'token':
             return self._token_string
         if item == 'hash':
-            return self._hash_string
+            return self.hash_string
         if item == 'value':
             return "%06.02f" % self._value
+        if item == 'encrypted_token':
+            return self._encrypted_token
 
         return None
 
     def keys(self):
         if hasattr(self, '_token_string'):
             return ('created', 'token', 'value')
+        if hasattr(self, '_encrypted_token'):
+            return ('created', 'hash', 'encrypted_token', 'value')
         if hasattr(self, '_hash_string'):
             return ('created', 'hash', 'value')
+
+    def encrypted(self, cipher):
+        try:
+            encrypted_token_string = base64.encodestring(cipher.encrypt(self._token_string)).strip()
+        except AttributeError:
+            raise BadTokenFormatError("This token does not define a token and can not be encrypted")
+        return Token({'created': self['created'],
+                      'value': self['value'],
+                      'hash': self['hash'],
+                      'encrypted_token': encrypted_token_string})
 
