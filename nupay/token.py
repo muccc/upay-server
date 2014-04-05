@@ -152,18 +152,20 @@ class Token(UserDict.DictMixin):
         return self.json_string
 
     def __getitem__(self, item):
-        if item == 'created':
-            return self.created.isoformat()
-        if item == 'token':
-            return self._token_string
-        if item == 'hash':
-            return self.hash_string
-        if item == 'value':
-            return "%06.02f" % self._value
-        if item == 'encrypted_token':
-            return self._encrypted_token
-
-        return None
+        try:
+            if item == 'created':
+                return self.created.isoformat()
+            if item == 'token':
+                return self._token_string
+            if item == 'hash':
+                return self.hash_string
+            if item == 'value':
+                return "%06.02f" % self._value
+            if item == 'encrypted_token':
+                return self._encrypted_token
+        except AttributeError:
+            raise KeyError()
+        raise KeyError()
 
     def keys(self):
         if hasattr(self, '_token_string'):

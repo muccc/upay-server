@@ -50,7 +50,16 @@ class TokenTest(unittest.TestCase):
 
         self.assertEquals(token3, decrypted)
 
-        print encrypted.json_string
+        decrypted = nupay.Token(str(encrypted), self._decrypt)
+
+        self.assertEquals(token3, decrypted)
+
+        encrypted2 = nupay.Token(str(encrypted))
+
+        self.assertEquals(encrypted, encrypted2)
+
+        self.assertTrue('token' not in encrypted)
+        self.assertTrue('encrypted_token' in encrypted)
 
     def test_partial(self):
         token1 = nupay.Token({'value': '002.00', 'hash': '00'*64, 'created': '2012-12-12 12:12:12'})
