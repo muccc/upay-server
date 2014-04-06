@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+import nupay
+
+if __name__ == '__main__':
+    git_collector = nupay.GITCollector('git@github.com:schneider42/tokens.git')
+    collectors = [git_collector]
+    forwarder = nupay.MQTTTokenForwarder('localhost', '/collected/#', 'token-forwarder', collectors)
+    forwarder.join()
+
