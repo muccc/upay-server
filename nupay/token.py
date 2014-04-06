@@ -98,7 +98,7 @@ class Token(UserDict.DictMixin):
 
     def _create_from_value(self, value):
         if value < Token.MIN_VALUE or value > Token.MAX_VALUE:
-            raise ValueError("Value is out of bounds")
+            raise ValueError("Value is out of bounds: %f" % value)
 
         from Crypto import Random
         self._token_string = Random.get_random_bytes(32).encode('hex')
