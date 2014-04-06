@@ -91,7 +91,7 @@ class Token(UserDict.DictMixin):
                     self._encrypted_token = str(token['encrypted_token'])
 
         if cipher is not None and self._encrypted_token is not None:
-            self._token_string = cipher.decrypt(base64.decodestring(self._encrypted_token))
+            self._token_string = cipher.decrypt(base64.b64decode(self._encrypted_token))
             self._encrypted_token = None
 
         self.logger.debug("New token: %s" % self)
@@ -177,7 +177,7 @@ class Token(UserDict.DictMixin):
 
     def encrypted(self, cipher):
         try:
-            encrypted_token_string = base64.encodestring(cipher.encrypt(self._token_string)).strip()
+            encrypted_token_string = base64.b64encode(cipher.encrypt(self._token_string))
         except AttributeError:
             raise BadTokenFormatError("This token does not define a token and can not be encrypted")
         return Token({'created': self['created'],
