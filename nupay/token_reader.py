@@ -45,7 +45,7 @@ class USBTokenReader(object):
                     d[l[0]] = l[1].replace("\\040"," ")
         return d
 
-    def read_tokens(self, max_tokens = 200, max_size = 100 * 1024):
+    def read_tokens(self, max_tokens = 200, max_size = 100 * 1024, found_medium_callback = lambda x: None):
         self._read_paths = []
         read_paths = []
 
@@ -56,6 +56,7 @@ class USBTokenReader(object):
                 if not os.path.isfile(purse_path):
                     continue
 
+                found_medium_callback(purse_path)
                 tokens = read_tokens_from_file(purse_path, max_tokens, max_size)
                 if len(tokens) > 0:
                     self._read_paths = [mount_point]
