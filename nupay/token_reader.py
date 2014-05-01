@@ -18,12 +18,14 @@ def read_tokens_from_file(purse_path, max_tokens = 200, max_size = 100 * 1024):
     tokens = []
     with io.open(purse_path, 'rb') as purse:
         for line in purse:
-            t = token.Token(line)
-            if t not in tokens:
-                tokens.append(t)
-            else:
-                logger.info("Found duplicated token: %s"%t.token_string)
-
+            try:
+                t = token.Token(line)
+                if t not in tokens:
+                    tokens.append(t)
+                else:
+                    logger.info("Found duplicated token: %s"%t.token_string)
+            except:
+                pass
             if len(tokens) >= max_tokens:
                 break
 
