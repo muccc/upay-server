@@ -14,7 +14,7 @@ setup(
     author_email='schneider@xtort.eu',
     url='https://github.com/schneider42/nupay',
     packages=['nupay'],
-    scripts=['scripts/token-authority-server'],
+    scripts=['scripts/token-authority-server', 'scripts/mqtt-git-forwarder'],
     long_description=open('README.md').read(),
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or ",
