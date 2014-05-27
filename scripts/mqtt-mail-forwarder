@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+import nupay
+import ConfigParser
+
+def read_config(config_location):
+    config = ConfigParser.RawConfigParser()
+    config.read(config_location)
+    return config
+
+if __name__ == '__main__':
+    config = read_config('/etc/upay/mqtt-mail-forwarder.cfg')
+
+    from_ = config.get('Mail', 'from')
+    to = config.get('Mail', 'to')
+    mail_server = config.get('Mail', 'smtp_server')
+    mail_server_port = 0 #587
+    mail_collector = nupay.MailCollector(from_, to, mail_server, mail_server_port)
+    collectors = [mail_collector]
+
+    mqtt_server = config.get('MQTT', 'server')
+    mqtt_topic = config.get('MQTT', 'topic')
+    mqtt_client_id = config.get('MQTT', 'client_id')
+    forwarder = nupay.MQTTTokenForwarder(mqtt_server, mqtt_topic, mqtt_client_id, collectors, timeout = 10)
+    forwarder.join()
+    

@@ -5,7 +5,7 @@ import tempfile
 import io
 import logging
 import shutil
-
+import hashlib
 import nupay
 
 class USBTokenReaderTest(unittest.TestCase):
@@ -20,11 +20,11 @@ class USBTokenReaderTest(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
- 
+
     def write_no_device(self):
         with io.open(self.mounts_path, "wb") as f:
             f.write("/dev/sda2 /boot ext2 rw,relatime,errors=continue 0 0\n")
-   
+
     def write_paths(self, paths):
         with io.open(self.mounts_path, "wb") as f:
             f.write("/dev/sda2 /boot ext2 rw,relatime,errors=continue 0 0\n")
@@ -33,7 +33,7 @@ class USBTokenReaderTest(unittest.TestCase):
 
     def test_no_device(self):
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
-    
+
     def test_new_device(self):
         self.write_paths(["/mnt/foobar"])
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
@@ -44,36 +44,40 @@ class USBTokenReaderTest(unittest.TestCase):
             purse.write("123\n")
             purse.write("124\n")
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
- 
+
     def test_new_device_with_empty_purse(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             pass
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
-        
+
     def test_new_device_with_purse_dup(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
- 
+            purse.write('{"token": "657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "value": "001.00", "created": "2014-03-30T22:33:37"}\n')
+            purse.write('{"token": "657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "value": "001.00", "created": "2014-03-30T22:33:37"}\n')
+
         tokens = self.token_reader.read_tokens()
         self.assertEqual(1, len(tokens))
-        self.assertEqual(tokens[0].hash, "db891851322ff6b04b993af03fda984f3356f64e34abaf73faf7919cae02c1f38c4cd172f6e71414cc25e7f2c331c2cdc4e176e604a2b16686eb7d528671b513")
- 
+        
+        sha512 = hashlib.sha512()
+        sha512.update('%'.join(("001.00%657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "2014-03-30T22:33:37")))
+        hash_string = sha512.hexdigest()
+        self.assertEqual(tokens[0].hash_string, hash_string)
+
     def test_new_device_with_purse(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
-            purse.write("24fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
- 
+            purse.write('{"token": "657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "value": "001.00", "created": "2014-03-30T22:33:37"}\n')
+            purse.write('{"token": "757af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "value": "001.00", "created": "2014-03-30T22:33:37"}\n')
+
         tokens = self.token_reader.read_tokens()
         self.assertEqual(2, len(tokens))
-    
+
     def test_device_removed(self):
         self.write_paths([self.tmpdir])
         with io.open(self.tmpdir+'/purse', "wb") as purse:
-            purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%1375901686\n")
+            purse.write('{"token": "657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510a27", "value": "001.00", "created": "2014-03-30T22:33:37"}\n')
         self.token_reader.read_tokens()
 
         self.assertTrue(self.token_reader.medium_valid)
@@ -85,7 +89,7 @@ class USBTokenReaderTest(unittest.TestCase):
         t = 1375901686
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             for i in range(230):
-                purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
+                purse.write('{"token": "657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510%03d", "value": "001.00", "created": "2014-03-30T22:33:37"}\n' % i)
         tokens = self.token_reader.read_tokens()
         self.assertEqual(200, len(tokens))
 
@@ -94,7 +98,7 @@ class USBTokenReaderTest(unittest.TestCase):
         t = 1375901686
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             for i in range(300):
-                purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
+                purse.write('{"token": "657af09565726f9aa079df6a6a250071b7f77e8d3c7dbe925130409cad510%03d", "value": "001.00", "created": "2014-03-30T22:33:37"}\n' % i)
         tokens = self.token_reader.read_tokens(250)
         self.assertEqual(250, len(tokens))
 
@@ -103,7 +107,7 @@ class USBTokenReaderTest(unittest.TestCase):
         t = 1375901686
         with io.open(self.tmpdir+'/purse', "wb") as purse:
             for i in range(30000):
-                purse.write("23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
+                purse.write("023.42%%23fff2f231992957ecf7180d3490ead21b5da8d489b71dd6e59b02a0f563e330%%%d\n"%(t+i))
         self.assertRaises(nupay.NoTokensAvailableError, self.token_reader.read_tokens)
 
 
