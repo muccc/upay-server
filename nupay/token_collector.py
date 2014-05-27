@@ -165,6 +165,8 @@ class MailCollector(Collector):
         self._mail_server_port = mail_server_port
 
     def collect_tokens(self, tokens):
+        if not tokens:
+            return
         isodate = datetime.datetime.utcfromtimestamp(int(time.time())).isoformat()
         rfcdate = email.utils.formatdate(localtime = True)
 
