@@ -13,7 +13,6 @@ from flask import Flask, jsonify, Response, request, abort, url_for
 from flask import make_response
 import flask
 
-from OpenSSL import SSL
 
 import nupay
 import nupay.token_authority_schemas as schemas
@@ -57,7 +56,7 @@ app = Flask(__name__)
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'} ), 404)
 
-@app.route('/v1.0/validate', methods = ['POST'])
+@app.route('/api/v1.0/validate', methods = ['POST'])
 @get_global_lock
 def validate_tokens():
     try:
@@ -86,7 +85,7 @@ def validate_tokens():
     token_authority.commit()
     return make_response(jsonify( { 'valid_tokens': map(str, valid_tokens) } ))
 
-@app.route('/v1.0/transform', methods = ['POST'])
+@app.route('/api/v1.0/transform', methods = ['POST'])
 @get_global_lock
 def transform_tokens():
     try:
@@ -112,7 +111,7 @@ def transform_tokens():
 
     return make_response(jsonify( { 'transformed_tokens': map(str, output_tokens) } ))
 
-@app.route('/v1.0/create', methods = ['POST'])
+@app.route('/api/v1.0/create', methods = ['POST'])
 @get_global_lock
 def create_tokens():
     try:
@@ -125,6 +124,7 @@ def create_tokens():
     return make_response(jsonify( { 'created_tokens': map(str, created_tokens) } ))
 
 if config.getboolean('WebService', 'use_ssl'):
+    from OpenSSL import SSL
     context = SSL.Context(SSL.SSLv23_METHOD)
     context.use_privatekey_file('test.key')
     context.use_certificate_file('test.crt')
