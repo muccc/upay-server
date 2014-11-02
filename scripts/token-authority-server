@@ -13,7 +13,6 @@ from flask import Flask, jsonify, Response, request, abort, url_for
 from flask import make_response
 import flask
 
-from OpenSSL import SSL
 
 import nupay
 import nupay.token_authority_schemas as schemas
@@ -125,6 +124,7 @@ def create_tokens():
     return make_response(jsonify( { 'created_tokens': map(str, created_tokens) } ))
 
 if config.getboolean('WebService', 'use_ssl'):
+    from OpenSSL import SSL
     context = SSL.Context(SSL.SSLv23_METHOD)
     context.use_privatekey_file('test.key')
     context.use_certificate_file('test.crt')
