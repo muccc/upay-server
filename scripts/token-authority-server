@@ -3,11 +3,12 @@ from functools import wraps
 import time
 from decimal import Decimal
 import ConfigParser
-import sys
 import os
 import uuid
 import threading
 from jsonschema import ValidationError
+import logging
+import logging.config
 
 from flask import Flask, jsonify, Response, request, abort, url_for
 from flask import make_response
@@ -32,6 +33,11 @@ parser.add_argument('-c',
                     default='/etc/upay/server.conf',
                     help='Location of the configuration file')
 
+parser.add_argument('-l',
+                    type=str,
+                    dest='logging_file_name',
+                    default='/etc/upay/logging.ini',
+                    help='Location of the log configuration file')
 
 # Parse the arguments as defined
 args = parser.parse_args()
@@ -132,10 +138,8 @@ else:
     context = None
 
 if __name__ == '__main__':
-    #app.run(debug = True, ssl_context=context)
+    logging.config.fileConfig(args.logging_file_name)
+    logger = logging.getLogger("token-authority-server")
+    logger.info("Starting token authority server")
     app.run(debug = False, ssl_context=context)
-
-
-
-
 
