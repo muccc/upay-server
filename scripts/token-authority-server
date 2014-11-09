@@ -129,6 +129,20 @@ def create_tokens():
     created_tokens = map(lambda value: nupay.Token(Decimal(value)), request.json['values'])
     return make_response(jsonify( { 'created_tokens': map(str, created_tokens) } ))
 
+@app.route('/api/v1.0/status', methods = ['GET'])
+@get_global_lock
+def status():
+    database_ok = False
+    try:
+        token_authority = nupay.TokenAuthority(config)
+        token_authority.connect()
+        database_ok = True
+    except:
+        pass
+
+    return make_response(jsonify( { 'database': 'OK' if database_ok else 'DOWN' } ))
+
+
 if config.getboolean('WebService', 'use_ssl'):
     from OpenSSL import SSL
     context = SSL.Context(SSL.SSLv23_METHOD)
