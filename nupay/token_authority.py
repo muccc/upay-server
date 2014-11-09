@@ -146,7 +146,7 @@ class TokenAuthority(object):
         if result == None:
             self._logger.debug("Token %s not found" % token)
             raise NoValidTokenFoundError("Token not found")
-        self._logger.debug("Token %s is valid")
+        self._logger.debug("Token %s is valid" % token)
 
     def _execute(self, statement):
         return self._connection.execute(statement)
