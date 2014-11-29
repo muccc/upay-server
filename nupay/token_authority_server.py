@@ -1,23 +1,17 @@
-#!/usr/bin/env python
-from functools import wraps
-import time
-from decimal import Decimal
 import ConfigParser
-import os
-import uuid
 import threading
-from jsonschema import ValidationError
 import logging
 import logging.config
+import argparse
 
-from flask import Flask, jsonify, Response, request, abort, url_for
-from flask import make_response
-import flask
-
+from functools import wraps
+from decimal import Decimal
+from jsonschema import ValidationError
+from flask import Flask, jsonify, request, make_response
 
 import nupay
 import nupay.token_authority_schemas as schemas
-import argparse
+
 
 # Program name, version and date
 PROGRAM_NAME = 'UPAY Token Authority Server'
@@ -145,15 +139,18 @@ def status():
 
 if config.getboolean('WebService', 'use_ssl'):
     from OpenSSL import SSL
-    context = SSL.Context(SSL.SSLv23_METHOD)
+    context = SSL.Context(SSL.TLSv1_2_METHOD)
     context.use_privatekey_file('test.key')
     context.use_certificate_file('test.crt')
 else:
     context = None
 
-if __name__ == '__main__':
+
+def run():
     logging.config.fileConfig(args.logging_file_name)
     logger = logging.getLogger("token-authority-server")
     logger.info("Starting token authority server")
     app.run(debug = False, ssl_context=context)
 
+if __name__ == '__main__':
+    run()
