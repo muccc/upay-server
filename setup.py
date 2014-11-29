@@ -6,14 +6,14 @@ except ImportError:
     from distutils.core import setup
 
 setup(
-    name='nupay',
+    name='upay-server',
     version='1.0.0',
-    description='Rewrite of upay',
-    author='Tobias Schneider',
-    author_email='schneider@xtort.eu',
-    url='https://github.com/schneider42/nupay',
-    packages=['nupay'],
-    scripts=['scripts/mqtt-git-forwarder', 'scripts/mqtt-mail-forwarder'],
+    description='upay token authority server',
+    author='Bernd Stolle, Tobias Schneider',
+    author_email='bsx+ccc@0xcafec0.de, schneider@xtort.eu',
+    url='https://github.com/muccc/upay-server',
+    packages=['upay.server'],
+    namespace_packages = ['upay'],
     long_description=open('README.md').read(),
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or ",
@@ -22,11 +22,11 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    requires=["Flask", "sqlalchemy", "jsonschema", "requests", "iso8601", "pygit", "mosquitto"],
+    requires=["Flask", "sqlalchemy", "jsonschema", "iso8601"],
     entry_points = """
     [console_scripts]
-    token-authority-server = nupay.token_authority_server:run
+    token-authority-server = upay.server:app.run
     """,
-    keywords='nupay upay',
+    keywords='upay',
     license='GPLv3+',
 )
