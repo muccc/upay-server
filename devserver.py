@@ -15,6 +15,5 @@ if 'USE_SSL' in app.config and app.config['USE_SSL']:
     context.use_certificate_file('test.crt')
 
 authority = TokenAuthority(app.config)
-authority.bootstrap_db()
 
 app.run()
