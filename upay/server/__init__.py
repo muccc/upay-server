@@ -1,6 +1,7 @@
 from flask import Flask, make_response, jsonify
 
 app = Flask(__name__)
+app.config.from_envvar('UPAY_SERVER_CONFIG', True)
 
 # utilities
 from .utils import initialize_logging
