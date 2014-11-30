@@ -1,5 +1,5 @@
 import threading
-import logging
+import logging.config
 from functools import wraps
 
 from . import app
