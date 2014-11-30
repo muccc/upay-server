@@ -1,5 +1,5 @@
 from jsonschema import validate
-from token import Token
+from upay.common import Token
 
 _value_schema = {
     "type": "string",

@@ -1,20 +1,20 @@
 import logging
 import sqlalchemy
 from sqlalchemy import Table, Column, DateTime, String, MetaData, select
-from functools import partial
 
 import time
 from datetime import datetime
-from decimal import Decimal
 
-from session import SessionConnectionError
-from token import Token
+from upay.common import Token
+
 
 class NoValidTokenFoundError(Exception):
     pass
 
+
 class TimeoutError(Exception):
     pass
+
 
 class TokenAuthority(object):
     def __init__(self, config):
@@ -22,14 +22,14 @@ class TokenAuthority(object):
         self.config = config
         try:
             isolation_level = 'SERIALIZABLE'
-            self._engine = sqlalchemy.create_engine(config.get('Database', 'url'),
+            self._engine = sqlalchemy.create_engine(config['DATABASE_URL'],
                                                     echo = False,
                                                     isolation_level = isolation_level)
             self.connect()
             self.disconnect()
         except Exception as e:
             self._logger.warning("Can not connect to the database", exc_info=True)
-            raise SessionConnectionError(e)
+            raise RuntimeError(e)
         self._init_metadata()
 
     def _init_metadata(self):
@@ -63,7 +63,7 @@ class TokenAuthority(object):
         self._transaction = self._connection.begin()
 
     def bootstrap_db(self):
-        if self.config.get('Database','allow_bootstrap') != 'True':
+        if not self.config['DATABASE_ALLOW_BOOTSTRAP']:
             self.logger.error("Bootstrapping is disabled in the configuration")
             raise RuntimeError("Bootstrapping is disabled in the configuration")
 
