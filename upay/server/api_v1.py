@@ -20,6 +20,7 @@ def status():
         token_authority.connect()
         database_status = 'OK'
         return_code = 200
+        token_authority.disconnect()
     except Exception as ex:
         app.log_exception(ex)
 
